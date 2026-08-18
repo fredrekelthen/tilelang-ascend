@@ -296,82 +296,75 @@ def setup_random_seed():
 
 
 @pytest.mark.usefixtures("setup_random_seed")
-@pytest.mark.parametrize(
-    "target",
-    ["ascendc", pytest.param("pto", marks=pytest.mark.low_priority)],
-)
-@pytest.mark.parametrize("num_ways", [2, 3, 4])
-def test_merge_sort_basic(target, num_ways):
-    """2/3/4-way merge: compile + run + precision."""
-    run_test_merge(block_len=64, num_ways=num_ways, target=target)
+def test_merge_sort_basic_ascendc():
+    """2/3/4-way merge on ascendc: compile + run + precision."""
+    for num_ways in (2, 3, 4):
+        run_test_merge(block_len=64, num_ways=num_ways, target="ascendc")
 
 
 @pytest.mark.usefixtures("setup_random_seed")
+def test_merge_sort_sizes_ascendc():
+    """Block lengths and unequal sources on ascendc."""
+    for block_len in (16, 64):
+        run_test_merge(block_len=block_len, num_ways=2, target="ascendc")
+    run_test_merge_unequal([16, 8], target="ascendc")
+    run_test_merge_unequal([48, 16], target="ascendc")
+
+
+@pytest.mark.usefixtures("setup_random_seed")
+def test_merge_sort_edges_ascendc():
+    """Boundary shapes on ascendc: min blockLen and BufferRegion slices."""
+    run_test_merge(block_len=1, num_ways=2, target="ascendc")
+    run_test_merge_region(M=2, per_row=128, target="ascendc")
+
+
+@pytest.mark.low_priority
+@pytest.mark.usefixtures("setup_random_seed")
+@pytest.mark.parametrize("num_ways", [2, 3, 4])
+def test_merge_sort_basic_pto(num_ways):
+    """2/3/4-way merge on pto (low_priority)."""
+    run_test_merge(block_len=64, num_ways=num_ways, target="pto")
+
+
+@pytest.mark.low_priority
+@pytest.mark.usefixtures("setup_random_seed")
 @pytest.mark.parametrize(
-    "target",
-    ["ascendc", pytest.param("pto", marks=pytest.mark.low_priority)],
-)
-@pytest.mark.parametrize(
-    "block_len",
+    "target,block_len",
     [
-        16,
-        64,
-        pytest.param(128, marks=pytest.mark.low_priority),
+        ("ascendc", 128),  # ascendc large block len
+        ("pto", 16),
+        ("pto", 64),
+        ("pto", 128),
     ],
 )
-def test_merge_sort_2way_sizes(target, block_len):
-    """2-way merge with different block lengths."""
+def test_merge_sort_2way_sizes_low(target, block_len):
+    """2-way merge with block lengths on both backends (low_priority)."""
     run_test_merge(block_len=block_len, num_ways=2, target=target)
 
 
-@pytest.mark.usefixtures("setup_random_seed")
-@pytest.mark.parametrize(
-    "sizes",
-    [
-        (16, 8),
-        (48, 16),
-    ],
-)
-def test_merge_sort_unequal_ascendc(sizes):
-    """Unequal block lengths are supported on the ascendc backend."""
-    run_test_merge_unequal(list(sizes), target="ascendc")
-
-
-@pytest.mark.usefixtures("setup_random_seed")
-@pytest.mark.parametrize(
-    "target",
-    ["ascendc", pytest.param("pto", marks=pytest.mark.low_priority)],
-)
-def test_merge_sort_region(target):
-    """BufferRegion row slices as sources."""
-    run_test_merge_region(M=2, per_row=128, target=target)
-
-
-@pytest.mark.usefixtures("setup_random_seed")
 @pytest.mark.low_priority
+@pytest.mark.usefixtures("setup_random_seed")
+def test_merge_sort_region_pto():
+    """BufferRegion row slices as sources on pto (low_priority)."""
+    run_test_merge_region(M=2, per_row=128, target="pto")
+
+
+@pytest.mark.low_priority
+@pytest.mark.usefixtures("setup_random_seed")
+def test_merge_sort_min_blocklen_pto():
+    """Minimum block length for pto (>=4, 32-byte tile) (low_priority)."""
+    run_test_merge(block_len=4, num_ways=2, target="pto")
+
+
+@pytest.mark.low_priority
+@pytest.mark.usefixtures("setup_random_seed")
 @pytest.mark.parametrize(
     "target",
-    ["ascendc", pytest.param("pto", marks=pytest.mark.low_priority)],
+    ["ascendc", "pto"],
 )
 def test_merge_sort_stability(target):
     """Equal values keep source order and in-block order (stable merge)."""
     run_test_merge_stability(block_len=64, target=target)
-
-
-@pytest.mark.usefixtures("setup_random_seed")
-@pytest.mark.parametrize(
-    "target,expected_block_len",
-    [
-        ("ascendc", 1),  # ascendc accepts blockLen=1
-        pytest.param("pto", 4, marks=pytest.mark.low_priority),  # pto needs >=4
-    ],
-)
-def test_merge_sort_min_blocklen(target, expected_block_len):
-    """Minimum block length per backend.
-
-    ascendc accepts blockLen=1; pto requires blockLen >= 4 (32-byte tile).
-    """
-    run_test_merge(block_len=expected_block_len, num_ways=2, target=target)
 
 
 @pytest.mark.low_priority
