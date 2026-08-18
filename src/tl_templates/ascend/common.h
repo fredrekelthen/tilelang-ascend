@@ -941,17 +941,184 @@ CATLASS_DEVICE void tail_scalar(TailVecScalarOp op, LocalTensor<T> dst,
   }
 }
 
+// ---- compare / select ----------------------------------------------------
+// Compare and Select use a packed uint8 predicate.  Although the logical row
+// contains only ceil(physCol / 8) bytes, AscendC vector/MTE instructions start
+// every UB row on a 32-byte data-block boundary.  Memory planning widens
+// the predicate's backing allocation accordingly; the public Buffer shape and
+// GM representation remain densely packed.
+template <typename T>
+CATLASS_DEVICE bool tail_compare_value(T lhs, T rhs, AscendC::CMPMODE mode) {
+  // Bisheng rejects scalar half/bfloat16 comparison instructions in AICore
+  // functions.  Promote only the scalar control path; values written by
+  // select remain in their original dtype.
+  if constexpr (std::is_same_v<T, half> || std::is_same_v<T, bfloat16_t>) {
+    return tail_compare_value(static_cast<float>(lhs), static_cast<float>(rhs),
+                              mode);
+  } else {
+    switch (mode) {
+    case AscendC::CMPMODE::EQ:
+      return lhs == rhs;
+    case AscendC::CMPMODE::NE:
+      return lhs != rhs;
+    case AscendC::CMPMODE::GT:
+      return lhs > rhs;
+    case AscendC::CMPMODE::GE:
+      return lhs >= rhs;
+    case AscendC::CMPMODE::LT:
+      return lhs < rhs;
+    case AscendC::CMPMODE::LE:
+      return lhs <= rhs;
+    default:
+      return false;
+    }
+  }
+}
+
+template <typename T>
+CATLASS_DEVICE void
+tail_compare(LocalTensor<uint8_t> dst, LocalTensor<T> src0, LocalTensor<T> src1,
+             AscendC::CMPMODE mode, uint32_t validRow, uint32_t validCol,
+             uint32_t physRow, uint32_t physCol, uint32_t storageCol) {
+  (void)storageCol;
+  if (validRow == 0 || validCol == 0)
+    return;
+  constexpr uint32_t maskRowStride = 32;
+  dst.SetSize(physRow * maskRowStride);
+  AscendC::PipeBarrier<PIPE_ALL>();
+  for (uint32_t r = 0; r < validRow; ++r) {
+    for (uint32_t byte = 0; byte < (validCol + 7U) / 8U; ++byte) {
+      uint8_t packed = 0;
+      for (uint32_t bit = 0; bit < 8U; ++bit) {
+        uint32_t c = byte * 8U + bit;
+        if (c < validCol &&
+            tail_compare_value(src0.GetValue(r * physCol + c),
+                               src1.GetValue(r * physCol + c), mode)) {
+          packed |= static_cast<uint8_t>(1U << bit);
+        }
+      }
+      dst.SetValue(r * maskRowStride + byte, packed);
+    }
+  }
+  AscendC::PipeBarrier<PIPE_ALL>();
+}
+
+template <typename T>
+CATLASS_DEVICE void
+tail_compare_scalar(LocalTensor<uint8_t> dst, LocalTensor<T> src, T scalar,
+                    AscendC::CMPMODE mode, uint32_t validRow, uint32_t validCol,
+                    uint32_t physRow, uint32_t physCol, uint32_t storageCol) {
+  (void)storageCol;
+  if (validRow == 0 || validCol == 0)
+    return;
+  constexpr uint32_t maskRowStride = 32;
+  dst.SetSize(physRow * maskRowStride);
+  AscendC::PipeBarrier<PIPE_ALL>();
+  for (uint32_t r = 0; r < validRow; ++r) {
+    for (uint32_t byte = 0; byte < (validCol + 7U) / 8U; ++byte) {
+      uint8_t packed = 0;
+      for (uint32_t bit = 0; bit < 8U; ++bit) {
+        uint32_t c = byte * 8U + bit;
+        if (c < validCol &&
+            tail_compare_value(src.GetValue(r * physCol + c), scalar, mode)) {
+          packed |= static_cast<uint8_t>(1U << bit);
+        }
+      }
+      dst.SetValue(r * maskRowStride + byte, packed);
+    }
+  }
+  AscendC::PipeBarrier<PIPE_ALL>();
+}
+
+template <typename T>
+CATLASS_DEVICE void
+tail_select(LocalTensor<T> dst, LocalTensor<uint8_t> selMask,
+            LocalTensor<T> src0, LocalTensor<T> src1, AscendC::SELMODE mode,
+            uint32_t validRow, uint32_t validCol, uint32_t physRow,
+            uint32_t physCol, uint32_t storageCol) {
+  (void)storageCol;
+  if (validRow == 0 || validCol == 0)
+    return;
+  constexpr uint32_t maskRowStride = 32;
+  selMask.SetSize(physRow * maskRowStride);
+  AscendC::PipeBarrier<PIPE_ALL>();
+  for (uint32_t r = 0; r < validRow; ++r) {
+    for (uint32_t c = 0; c < validCol; ++c) {
+      uint8_t packed = selMask.GetValue(r * maskRowStride + c / 8U);
+      bool take_src0 = (packed & static_cast<uint8_t>(1U << (c & 7U))) != 0;
+      uint32_t index = r * physCol + c;
+      dst.SetValue(index,
+                   take_src0 ? src0.GetValue(index) : src1.GetValue(index));
+    }
+  }
+  AscendC::PipeBarrier<PIPE_ALL>();
+}
+
+template <typename T>
+CATLASS_DEVICE void
+tail_select_scalar(LocalTensor<T> dst, LocalTensor<uint8_t> selMask,
+                   LocalTensor<T> src, T scalar, AscendC::SELMODE mode,
+                   uint32_t validRow, uint32_t validCol, uint32_t physRow,
+                   uint32_t physCol, uint32_t storageCol) {
+  (void)storageCol;
+  if (validRow == 0 || validCol == 0)
+    return;
+  constexpr uint32_t maskRowStride = 32;
+  selMask.SetSize(physRow * maskRowStride);
+  AscendC::PipeBarrier<PIPE_ALL>();
+  for (uint32_t r = 0; r < validRow; ++r) {
+    for (uint32_t c = 0; c < validCol; ++c) {
+      uint8_t packed = selMask.GetValue(r * maskRowStride + c / 8U);
+      bool take_src = (packed & static_cast<uint8_t>(1U << (c & 7U))) != 0;
+      uint32_t index = r * physCol + c;
+      dst.SetValue(index, take_src ? src.GetValue(index) : scalar);
+    }
+  }
+  AscendC::PipeBarrier<PIPE_ALL>();
+}
+
+// ---- broadcast -----------------------------------------------------------
+template <typename T>
+CATLASS_DEVICE void
+tail_broadcast(LocalTensor<T> dst, LocalTensor<T> src, int axis,
+               uint32_t validRow, uint32_t validCol, uint32_t srcValidRow,
+               uint32_t srcValidCol, uint32_t dstPhysCol, uint32_t srcPhysCol) {
+  if (validRow == 0 || validCol == 0)
+    return;
+  if (axis == 1) {
+    uint32_t rows = validRow < srcValidRow ? validRow : srcValidRow;
+    constexpr uint32_t elemsPerBlock = 32 / sizeof(T);
+    uint32_t srcRowStride =
+        ((srcPhysCol + elemsPerBlock - 1) / elemsPerBlock) * elemsPerBlock;
+    AscendC::PipeBarrier<PIPE_ALL>();
+    for (uint32_t r = 0; r < rows; ++r) {
+      T scalar = src.GetValue(r * srcRowStride);
+      // Keep both full and tail rows on the vector path.  SetValue is a
+      // scalar-pipeline store and is not a sound producer for the following
+      // MTE3 copy on device; Duplicate supports an arbitrary element count and
+      // therefore writes exactly the valid prefix of every physical row.
+      AscendC::Duplicate(dst[r * dstPhysCol], scalar,
+                         static_cast<int32_t>(validCol));
+    }
+    AscendC::PipeBarrier<PIPE_ALL>();
+    return;
+  }
+  uint32_t cols = validCol < srcValidCol ? validCol : srcValidCol;
+  for (uint32_t r = 0; r < validRow; ++r) {
+    AscendC::Adds(dst[r * dstPhysCol], src, static_cast<T>(0),
+                  static_cast<int32_t>(cols));
+  }
+}
+
 // ---- reduce ----
 // The propagation pass emits this helper only for axis 0/-2: reduce down the
-// valid rows into out[0..validCol). `tmp`, `dim`, and `clear` stay in the ABI
-// shared with the native reduce call; this validated contract does not consume
-// tmp and always arrives normalized as dim == 0, clear == true.
+// valid rows into out[0..validCol). The validated contract consumes no tmp and
+// always arrives normalized as dim == 0, clear == true.
 template <typename T>
 CATLASS_DEVICE void tail_reduce_sum(LocalTensor<T> out, LocalTensor<T> src,
-                                    LocalTensor<uint8_t> tmp, int dim,
-                                    uint32_t validRow, uint32_t validCol,
-                                    uint32_t physCol, bool clear) {
-  (void)tmp;
+                                    int dim, uint32_t validRow,
+                                    uint32_t validCol, uint32_t physCol,
+                                    bool clear) {
   (void)dim;
   (void)clear;
   if (validRow == 0 || validCol == 0)
@@ -966,10 +1133,9 @@ CATLASS_DEVICE void tail_reduce_sum(LocalTensor<T> out, LocalTensor<T> src,
 
 template <typename T>
 CATLASS_DEVICE void tail_reduce_max(LocalTensor<T> out, LocalTensor<T> src,
-                                    LocalTensor<uint8_t> tmp, int dim,
-                                    uint32_t validRow, uint32_t validCol,
-                                    uint32_t physCol, bool clear) {
-  (void)tmp;
+                                    int dim, uint32_t validRow,
+                                    uint32_t validCol, uint32_t physCol,
+                                    bool clear) {
   (void)dim;
   (void)clear;
   if (validRow == 0 || validCol == 0)
@@ -982,10 +1148,9 @@ CATLASS_DEVICE void tail_reduce_max(LocalTensor<T> out, LocalTensor<T> src,
 
 template <typename T>
 CATLASS_DEVICE void tail_reduce_min(LocalTensor<T> out, LocalTensor<T> src,
-                                    LocalTensor<uint8_t> tmp, int dim,
-                                    uint32_t validRow, uint32_t validCol,
-                                    uint32_t physCol, bool clear) {
-  (void)tmp;
+                                    int dim, uint32_t validRow,
+                                    uint32_t validCol, uint32_t physCol,
+                                    bool clear) {
   (void)dim;
   (void)clear;
   if (validRow == 0 || validCol == 0)
@@ -1156,12 +1321,8 @@ gemm_v0(LocalTensor<T1> const &A, LocalTensor<T1> const &B,
 // 2-way merge sort
 template <typename T>
 CATLASS_DEVICE void
-MergeSort(const LocalTensor<T> &dst, const LocalTensor<uint8_t> &tmp,
-          const LocalTensor<T> &src0, const LocalTensor<T> &src1,
-          uint32_t blockLen0, uint32_t blockLen1) {
-  // Note: tmp parameter is kept for API consistency with PTO backend but not
-  // used in AscendC
-
+MergeSort(const LocalTensor<T> &dst, const LocalTensor<T> &src0,
+          const LocalTensor<T> &src1, uint32_t blockLen0, uint32_t blockLen1) {
   AscendC::MrgSort4Info params;
   params.elementLengths[0] = blockLen0;
   params.elementLengths[1] = blockLen1;
@@ -1183,13 +1344,9 @@ MergeSort(const LocalTensor<T> &dst, const LocalTensor<uint8_t> &tmp,
 // 3-way merge sort
 template <typename T>
 CATLASS_DEVICE void
-MergeSort(const LocalTensor<T> &dst, const LocalTensor<uint8_t> &tmp,
-          const LocalTensor<T> &src0, const LocalTensor<T> &src1,
-          const LocalTensor<T> &src2, uint32_t blockLen0, uint32_t blockLen1,
-          uint32_t blockLen2) {
-  // Note: tmp parameter is kept for API consistency with PTO backend but not
-  // used in AscendC
-
+MergeSort(const LocalTensor<T> &dst, const LocalTensor<T> &src0,
+          const LocalTensor<T> &src1, const LocalTensor<T> &src2,
+          uint32_t blockLen0, uint32_t blockLen1, uint32_t blockLen2) {
   AscendC::MrgSort4Info params;
   params.elementLengths[0] = blockLen0;
   params.elementLengths[1] = blockLen1;
@@ -1211,14 +1368,10 @@ MergeSort(const LocalTensor<T> &dst, const LocalTensor<uint8_t> &tmp,
 // 4-way merge sort
 template <typename T>
 CATLASS_DEVICE void
-MergeSort(const LocalTensor<T> &dst, const LocalTensor<uint8_t> &tmp,
-          const LocalTensor<T> &src0, const LocalTensor<T> &src1,
-          const LocalTensor<T> &src2, const LocalTensor<T> &src3,
-          uint32_t blockLen0, uint32_t blockLen1, uint32_t blockLen2,
-          uint32_t blockLen3) {
-  // Note: tmp parameter is kept for API consistency with PTO backend but not
-  // used in AscendC
-
+MergeSort(const LocalTensor<T> &dst, const LocalTensor<T> &src0,
+          const LocalTensor<T> &src1, const LocalTensor<T> &src2,
+          const LocalTensor<T> &src3, uint32_t blockLen0, uint32_t blockLen1,
+          uint32_t blockLen2, uint32_t blockLen3) {
   AscendC::MrgSort4Info params;
   params.elementLengths[0] = blockLen0;
   params.elementLengths[1] = blockLen1;
@@ -1436,10 +1589,31 @@ CATLASS_DEVICE void gemmL1(LocalTensor<T1> A, LocalTensor<T1> B,
 template <typename T, int32_t dim, int32_t axis, bool isReuseSource = false>
 CATLASS_DEVICE void
 Broadcast(const LocalTensor<T> &dst, const LocalTensor<T> &src,
-          LocalTensor<uint8_t> &sharedTmpBuffer, const uint32_t dstShape[dim],
+          LocalTensor<uint8_t> sharedTmpBuffer, const uint32_t dstShape[dim],
           const uint32_t srcShape[dim]) {
   AscendC::Broadcast<T, dim, axis, isReuseSource>(dst, src, dstShape, srcShape,
                                                   sharedTmpBuffer);
+}
+
+template <typename T, int32_t dim, int32_t axis, bool isReuseSource = false>
+CATLASS_DEVICE void
+Broadcast(const LocalTensor<T> &dst, const LocalTensor<T> &src,
+          const uint32_t dstShape[dim], const uint32_t srcShape[dim]) {
+  uint32_t dstSize = 1;
+  uint32_t srcSize = 1;
+  for (int32_t i = 0; i < dim; ++i) {
+    dstSize *= dstShape[i];
+    srcSize *= srcShape[i];
+  }
+  if (srcSize == dstSize) {
+    AscendC::Muls(dst, src, static_cast<T>(1), dstSize);
+    return;
+  }
+  ASCENDC_ASSERT((srcSize == 1), {
+    KERNEL_LOG(KERNEL_ERROR,
+               "Workspace-free Broadcast only supports equal or scalar shapes");
+  });
+  AscendC::Duplicate(dst, src.GetValue(0), dstSize);
 }
 
 template <typename T>

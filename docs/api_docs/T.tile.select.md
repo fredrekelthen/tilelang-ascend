@@ -15,6 +15,8 @@ def select(
     src0: Buffer | BufferRegion,
     src1: Buffer | BufferLoad | PrimExpr,
     selMode: str,
+    *,
+    tmp: Buffer | BufferRegion | None = None,
 )
 ```
 
@@ -25,8 +27,9 @@ def select(
 | dst | Output | Stores the selection result | tensor | Required |
 | selMask | Input | Selection mask; each bit controls the source of one element (bit=1 selects from src0, bit=0 selects from src1) | tensor (bit-packed, dtype uint8) | Required |
 | src0 | Input | Source selected when bit=1 | tensor | Required |
-| src1 | Input | Source selected when bit=0; supports tensor or scalar | tensor / scalar | Required |
+| src1 | Input | Source selected when bit=0; supports tensor, BufferLoad, or scalar | tensor / scalar | Required |
 | selMode | Input | Selection mode; determines how selMask is interpreted and the type of src1 | string, see [2.3.3 selMode](#233-selmode) | Required |
+| tmp | Input | Optional complete UB scratch storage; its scalar dtype is reinterpreted by lowering and has no semantic meaning | tensor / None | Optional (default `None`) |
 
 > **Type Notes**:
 > - **tensor**: A buffer (Buffer) allocated via `T.alloc_ub`, `T.alloc_shared`, etc., or its slice (BufferRegion)
@@ -61,7 +64,7 @@ selMode determines how selMask is interpreted. There are 3 modes:
 **src1 type and selMode correspondence**:
 - src1 is `PrimExpr` / `float` (scalar) → must use `"VSEL_TENSOR_SCALAR_MODE"`
 - src1 is `Buffer` / `BufferRegion` (tensor) → must use `"VSEL_CMPMASK_SPR"` or `"VSEL_TENSOR_TENSOR_MODE"`
-- src1 as `BufferLoad` (single element access) is currently not supported
+- src1 is `BufferLoad` (single element access) → must use `"VSEL_CMPMASK_SPR"` or `"VSEL_TENSOR_TENSOR_MODE"`
 
 ### 2.4 Constraints
 
@@ -69,7 +72,7 @@ selMode determines how selMask is interpreted. There are 3 modes:
 2. When src1 is a tensor, its shape must match src0
 3. selMask is a bit-packed mask; dtype must be uint8, element count = data element count / 8
 4. Operand addresses must be 32-byte aligned (hardware constraint)
-5. src1 supports only tensor (Buffer/BufferRegion) or scalar (PrimExpr/float); BufferLoad (single element access) is currently not supported
+5. src1 supports tensor (Buffer/BufferRegion), BufferLoad (single element access), or scalar (PrimExpr/float)
 6. `"VSEL_CMPMASK_SPR"` mode reuses the compare mask register; the maximum element count per call is `256 / sizeof(T)` (128 for float16, 64 for float32). Exceeding this causes precision errors (hardware constraint)
 7. `"VSEL_TENSOR_SCALAR_MODE"` and `"VSEL_TENSOR_TENSOR_MODE"` modes require reserving the last 8KB of Unified Buffer as temporary space (hardware constraint)
 

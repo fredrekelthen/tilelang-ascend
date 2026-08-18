@@ -168,8 +168,8 @@ add_dtype_target_params = [
     ("float16", "ascendc"),
     ("float", "pto"),
     ("float16", "pto"),
-    ("int16", "pto"),
-    ("int32", "pto"),
+    pytest.param("int16", "pto", marks=pytest.mark.low_priority),
+    pytest.param("int32", "pto", marks=pytest.mark.low_priority),
 ]
 
 
@@ -287,7 +287,10 @@ def run_test_adds(M, N, block_M, block_N, scalar, dtype, target):
     torch.testing.assert_close(b, ref_b, rtol=1e-2, atol=1e-2)
 
 
-@pytest.mark.parametrize("dtype", ["float", "float16", "int16", "int32"])
+@pytest.mark.parametrize(
+    "dtype",
+    ["float", "float16", pytest.param("int16", marks=pytest.mark.low_priority), pytest.param("int32", marks=pytest.mark.low_priority)],
+)
 @pytest.mark.parametrize("target", ["ascendc", "pto"])
 @pytest.mark.parametrize("shape", [(1024, 1024)])
 def test_adds(dtype, target, shape):
@@ -338,7 +341,7 @@ def run_test_bitwise_and(M, N, block_M, block_N, dtype, target):
     assert_close_npu(c, ref_c, dtype, rtol=1e-2, atol=1e-2)
 
 
-@pytest.mark.parametrize("dtype", ["int16", "uint16"])
+@pytest.mark.parametrize("dtype", ["int16", pytest.param("uint16", marks=pytest.mark.low_priority)])
 @pytest.mark.parametrize("target", ["ascendc", "pto"])
 @pytest.mark.parametrize("shape", [(1024, 1024)])
 def test_bitwise_and(dtype, target, shape):
@@ -466,7 +469,7 @@ def run_test_silu(M, N, block_M, block_N, dtype, target):
 
 @pytest.mark.parametrize("dtype", ["float", "float16"])
 @pytest.mark.parametrize("target", ["ascendc"])
-@pytest.mark.parametrize("shape", [(256, 256), (512, 512)])
+@pytest.mark.parametrize("shape", [(256, 256), pytest.param((512, 512), marks=pytest.mark.low_priority)])
 def test_silu(dtype, target, shape):
     M, N = shape
     run_test_silu(M, N, 128, 128, dtype, target)
@@ -791,7 +794,10 @@ def run_test_bitwise_lshift_slice(M, N, block_M, block_N, scalarvalue, dtype, ta
     assert_close_npu(b, ref_b, dtype, rtol=1e-2, atol=1e-2)
 
 
-@pytest.mark.parametrize("dtype", ["int16", "int32", "uint16", "uint32"])
+@pytest.mark.parametrize(
+    "dtype",
+    ["int16", "int32", pytest.param("uint16", marks=pytest.mark.low_priority), pytest.param("uint32", marks=pytest.mark.low_priority)],
+)
 @pytest.mark.parametrize("target", ["ascendc", "pto"])
 @pytest.mark.parametrize("shape", [(1024, 1024)])
 def test_bitwise_lshift_slice(dtype, target, shape):
@@ -847,7 +853,7 @@ def run_test_bitwise_not(M, N, block_M, block_N, dtype, target):
     assert_close_npu(b, ref_b, dtype, rtol=1e-2, atol=1e-2)
 
 
-@pytest.mark.parametrize("dtype", ["int16", "uint16"])
+@pytest.mark.parametrize("dtype", ["int16", pytest.param("uint16", marks=pytest.mark.low_priority)])
 @pytest.mark.parametrize("target", ["ascendc", "pto"])
 @pytest.mark.parametrize("shape", [(1024, 1024)])
 def test_bitwise_not(dtype, target, shape):
@@ -989,7 +995,10 @@ def run_test_bitwise_rshift_slice(M, N, block_M, block_N, scalarvalue, dtype, ta
     assert_close_npu(b, ref_b, dtype, rtol=1e-2, atol=1e-2)
 
 
-@pytest.mark.parametrize("dtype", ["int16", "int32", "uint16", "uint32"])
+@pytest.mark.parametrize(
+    "dtype",
+    ["int16", "int32", pytest.param("uint16", marks=pytest.mark.low_priority), pytest.param("uint32", marks=pytest.mark.low_priority)],
+)
 @pytest.mark.parametrize("target", ["ascendc", "pto"])
 @pytest.mark.parametrize("shape", [(1024, 1024)])
 def test_bitwise_rshift_slice(dtype, target, shape):
@@ -1050,7 +1059,7 @@ def run_test_bitwise_xor(M, N, block_M, block_N, dtype, target):
     assert_close_npu(c, ref_c, dtype, rtol=1e-2, atol=1e-2)
 
 
-@pytest.mark.parametrize("dtype", ["int16", "uint16"])
+@pytest.mark.parametrize("dtype", ["int16", pytest.param("uint16", marks=pytest.mark.low_priority)])
 @pytest.mark.parametrize("target", ["ascendc", "pto"])
 @pytest.mark.parametrize("shape", [(1024, 1024)])
 def test_bitwise_xor(dtype, target, shape):
@@ -1109,7 +1118,7 @@ def run_test_bitwise_xor_slice(M, N, block_M, block_N, dtype, target):
     assert_close_npu(c, ref_c, dtype, rtol=1e-2, atol=1e-2)
 
 
-@pytest.mark.parametrize("dtype", ["int16", "uint16"])
+@pytest.mark.parametrize("dtype", ["int16", pytest.param("uint16", marks=pytest.mark.low_priority)])
 @pytest.mark.parametrize("target", ["ascendc", "pto"])
 @pytest.mark.parametrize("shape", [(1024, 1024)])
 def test_bitwise_xor_slice(dtype, target, shape):
@@ -1472,7 +1481,7 @@ def run_test_cast_scale(M, N, block_M, block_N, mode, count, scale, target):
     torch.testing.assert_close(b, ref_b, rtol=1e-2, atol=1e-2)
 
 
-@pytest.mark.parametrize("dtype", ["int32", "float16"])
+@pytest.mark.parametrize("dtype", [pytest.param("int32", marks=pytest.mark.low_priority), "float16"])
 @pytest.mark.parametrize("target", ["ascendc", "pto"])
 @pytest.mark.parametrize("shape", [(64, 64)])
 def test_cast_scale(dtype, target, shape):
@@ -1697,7 +1706,7 @@ compare_dtype_target_params = [
 ]
 
 
-@pytest.mark.parametrize("out_dtype", ["int8", "uint8"])
+@pytest.mark.parametrize("out_dtype", ["int8", pytest.param("uint8", marks=pytest.mark.low_priority)])
 @pytest.mark.parametrize("dtype,target", compare_dtype_target_params)
 @pytest.mark.parametrize("shape", [(256, 256)])
 def test_compare(out_dtype, dtype, target, shape):
@@ -1756,7 +1765,7 @@ def run_test_compare_slice(M, N, block_M, block_N, mode, dtype, out_dtype, targe
     torch.testing.assert_close(c, ref_c, rtol=1e-2, atol=1e-2)
 
 
-@pytest.mark.parametrize("out_dtype", ["int8", "uint8"])
+@pytest.mark.parametrize("out_dtype", ["int8", pytest.param("uint8", marks=pytest.mark.low_priority)])
 @pytest.mark.parametrize("dtype", ["float", "float16"])
 @pytest.mark.parametrize("target", ["ascendc", "pto"])
 @pytest.mark.parametrize("shape", [(256, 256)])
@@ -1846,7 +1855,7 @@ def run_test_compare_scalar(M, N, block_M, block_N, mode, b_scalar, dtype, out_d
     torch.testing.assert_close(c, ref_c, rtol=1e-2, atol=1e-2)
 
 
-@pytest.mark.parametrize("out_dtype", ["int8", "uint8"])
+@pytest.mark.parametrize("out_dtype", ["int8", pytest.param("uint8", marks=pytest.mark.low_priority)])
 @pytest.mark.parametrize("dtype", ["float", "float16"])
 @pytest.mark.parametrize("target", ["ascendc", "pto"])
 @pytest.mark.parametrize("shape", [(256, 256)])
@@ -1906,7 +1915,7 @@ def run_test_compare_scalar_slice(M, N, block_M, block_N, mode, b_scalar, dtype,
     torch.testing.assert_close(c, ref_c, rtol=1e-2, atol=1e-2)
 
 
-@pytest.mark.parametrize("out_dtype", ["int8", "uint8"])
+@pytest.mark.parametrize("out_dtype", ["int8", pytest.param("uint8", marks=pytest.mark.low_priority)])
 @pytest.mark.parametrize("dtype", ["float", "float16"])
 @pytest.mark.parametrize("target", ["ascendc", "pto"])
 @pytest.mark.parametrize("shape", [(256, 256)])
@@ -2073,7 +2082,10 @@ def run_test_createvecindex(M, N, block_M, block_N, firstValue, dtype, target):
         torch.testing.assert_close(c, ref_c, rtol=1e-2, atol=1e-2)
 
 
-@pytest.mark.parametrize("dtype", ["int16", "int32", "float16", "float"])
+@pytest.mark.parametrize(
+    "dtype",
+    [pytest.param("int16", marks=pytest.mark.low_priority), pytest.param("int32", marks=pytest.mark.low_priority), "float16", "float"],
+)
 @pytest.mark.parametrize("target", ["ascendc"])
 def test_createvecindex_ascendc(dtype, target):
     M = 1
@@ -2084,7 +2096,15 @@ def test_createvecindex_ascendc(dtype, target):
     run_test_createvecindex(M, N, block_M, block_N, firstValue, dtype, target)
 
 
-@pytest.mark.parametrize("dtype", ["int32", "uint32", "int16", "uint16"])
+@pytest.mark.parametrize(
+    "dtype",
+    [
+        pytest.param("int32", marks=pytest.mark.low_priority),
+        pytest.param("uint32", marks=pytest.mark.low_priority),
+        "int16",
+        pytest.param("uint16", marks=pytest.mark.low_priority),
+    ],
+)
 @pytest.mark.parametrize("target", ["pto"])
 def test_createvecindex_pto(dtype, target):
     M = 1
@@ -2368,7 +2388,18 @@ def run_test_gather(M, N, block_M, block_N, dtype, target):
         torch.testing.assert_close(c, ref_c, rtol=1e-2, atol=1e-2)
 
 
-@pytest.mark.parametrize("dtype", ["int16", "int32", "uint16", "uint32", "float", "float16", "bfloat16"])
+@pytest.mark.parametrize(
+    "dtype",
+    [
+        pytest.param("int16", marks=pytest.mark.low_priority),
+        pytest.param("int32", marks=pytest.mark.low_priority),
+        pytest.param("uint16", marks=pytest.mark.low_priority),
+        pytest.param("uint32", marks=pytest.mark.low_priority),
+        "float",
+        "float16",
+        pytest.param("bfloat16", marks=pytest.mark.low_priority),
+    ],
+)
 @pytest.mark.parametrize("target", ["ascendc", "pto"])
 @pytest.mark.parametrize("shape", [(128, 1024)])
 def test_gather(dtype, target, shape):
@@ -2569,7 +2600,18 @@ def run_test_gather_slice(M, N, block_M, block_N, dtype, target):
         torch.testing.assert_close(c, ref_c, rtol=1e-2, atol=1e-2)
 
 
-@pytest.mark.parametrize("dtype", ["int16", "int32", "uint16", "uint32", "float", "float16", "bfloat16"])
+@pytest.mark.parametrize(
+    "dtype",
+    [
+        pytest.param("int16", marks=pytest.mark.low_priority),
+        pytest.param("int32", marks=pytest.mark.low_priority),
+        pytest.param("uint16", marks=pytest.mark.low_priority),
+        pytest.param("uint32", marks=pytest.mark.low_priority),
+        "float",
+        "float16",
+        pytest.param("bfloat16", marks=pytest.mark.low_priority),
+    ],
+)
 @pytest.mark.parametrize("target", ["ascendc"])
 @pytest.mark.parametrize("shape", [(128, 1024)])
 def test_gather_slice(dtype, target, shape):
@@ -2649,7 +2691,7 @@ def run_test_gatherb(M, N, block_M, block_N, b_len, repeat_time, dtype, target):
     torch.testing.assert_close(c.cpu(), ref_c.cpu(), rtol=1e-2, atol=1e-2)
 
 
-@pytest.mark.parametrize("dtype", ["uint16", "uint32"])
+@pytest.mark.parametrize("dtype", ["uint16", pytest.param("uint32", marks=pytest.mark.low_priority)])
 @pytest.mark.parametrize("target", ["ascendc", "pto"])
 @pytest.mark.parametrize("shape", [(64, 1024)])
 def test_gatherb(dtype, target, shape):
@@ -2884,7 +2926,18 @@ def run_test_gathermask(M, N, block_M, block_N, dtype, target):
         torch.testing.assert_close(b, ref_b, rtol=1e-2, atol=1e-2)
 
 
-@pytest.mark.parametrize("dtype", ["int16", "int32", "uint16", "uint32", "float", "float16", "bfloat16"])
+@pytest.mark.parametrize(
+    "dtype",
+    [
+        pytest.param("int16", marks=pytest.mark.low_priority),
+        pytest.param("int32", marks=pytest.mark.low_priority),
+        pytest.param("uint16", marks=pytest.mark.low_priority),
+        pytest.param("uint32", marks=pytest.mark.low_priority),
+        "float",
+        "float16",
+        pytest.param("bfloat16", marks=pytest.mark.low_priority),
+    ],
+)
 @pytest.mark.parametrize("target", ["ascendc", "pto"])
 @pytest.mark.parametrize("shape", [(4, 256)])
 def test_gathermask(dtype, target, shape):
@@ -3004,7 +3057,10 @@ def run_test_vec_max(M, N, block_M, block_N, dtype, target):
     torch.testing.assert_close(c, ref_c, rtol=1e-2, atol=1e-2)
 
 
-@pytest.mark.parametrize("dtype", ["float", "float16", "int16", "int32"])
+@pytest.mark.parametrize(
+    "dtype",
+    ["float", "float16", pytest.param("int16", marks=pytest.mark.low_priority), pytest.param("int32", marks=pytest.mark.low_priority)],
+)
 @pytest.mark.parametrize("target", ["ascendc", "pto"])
 @pytest.mark.parametrize("shape", [(1024, 1024)])
 def test_vec_max(dtype, target, shape):
@@ -3062,7 +3118,10 @@ def run_test_vec_maxs(M, N, block_M, block_N, scalar, dtype, target):
     torch.testing.assert_close(b, ref_b, rtol=1e-2, atol=1e-2)
 
 
-@pytest.mark.parametrize("dtype", ["float", "float16", "int16", "int32"])
+@pytest.mark.parametrize(
+    "dtype",
+    ["float", "float16", pytest.param("int16", marks=pytest.mark.low_priority), pytest.param("int32", marks=pytest.mark.low_priority)],
+)
 @pytest.mark.parametrize("target", ["ascendc", "pto"])
 @pytest.mark.parametrize("shape", [(1024, 1024)])
 def test_vec_maxs(dtype, target, shape):
@@ -3129,7 +3188,10 @@ def run_test_vec_min(M, N, block_M, block_N, dtype, target):
     torch.testing.assert_close(c, ref_c, rtol=1e-2, atol=1e-2)
 
 
-@pytest.mark.parametrize("dtype", ["float", "float16", "int16", "int32"])
+@pytest.mark.parametrize(
+    "dtype",
+    ["float", "float16", pytest.param("int16", marks=pytest.mark.low_priority), pytest.param("int32", marks=pytest.mark.low_priority)],
+)
 @pytest.mark.parametrize("target", ["ascendc", "pto"])
 @pytest.mark.parametrize("shape", [(1024, 1024)])
 def test_vec_min(dtype, target, shape):
@@ -3187,7 +3249,10 @@ def run_test_vec_mins(M, N, block_M, block_N, scalar, dtype, target):
     torch.testing.assert_close(b, ref_b, rtol=1e-2, atol=1e-2)
 
 
-@pytest.mark.parametrize("dtype", ["float", "float16", "int16", "int32"])
+@pytest.mark.parametrize(
+    "dtype",
+    ["float", "float16", pytest.param("int16", marks=pytest.mark.low_priority), pytest.param("int32", marks=pytest.mark.low_priority)],
+)
 @pytest.mark.parametrize("target", ["ascendc", "pto"])
 @pytest.mark.parametrize("shape", [(1024, 1024)])
 def test_vec_mins(dtype, target, shape):
@@ -3254,7 +3319,10 @@ def run_test_vec_mul(M, N, block_M, block_N, dtype, target):
     torch.testing.assert_close(c, ref_c, rtol=1e-2, atol=1e-2)
 
 
-@pytest.mark.parametrize("dtype", ["float", "float16", "int16", "int32"])
+@pytest.mark.parametrize(
+    "dtype",
+    ["float", "float16", pytest.param("int16", marks=pytest.mark.low_priority), pytest.param("int32", marks=pytest.mark.low_priority)],
+)
 @pytest.mark.parametrize("target", ["ascendc", "pto"])
 @pytest.mark.parametrize("shape", [(1024, 1024)])
 def test_vec_mul(dtype, target, shape):
@@ -3310,7 +3378,10 @@ def run_test_vec_muls(M, N, block_M, block_N, scalar, dtype, target):
     torch.testing.assert_close(b, ref_b, rtol=1e-2, atol=1e-2)
 
 
-@pytest.mark.parametrize("dtype", ["float", "float16", "int16", "int32"])
+@pytest.mark.parametrize(
+    "dtype",
+    ["float", "float16", pytest.param("int16", marks=pytest.mark.low_priority), pytest.param("int32", marks=pytest.mark.low_priority)],
+)
 @pytest.mark.parametrize("target", ["ascendc", "pto"])
 @pytest.mark.parametrize("shape", [(1024, 1024)])
 def test_vec_muls(dtype, target, shape):
@@ -3366,7 +3437,7 @@ def run_test_bitwise_or(M, N, block_M, block_N, dtype, target):
     assert_close_npu(c, ref_c, dtype, rtol=1e-2, atol=1e-2)
 
 
-@pytest.mark.parametrize("dtype", ["int16", "uint16"])
+@pytest.mark.parametrize("dtype", ["int16", pytest.param("uint16", marks=pytest.mark.low_priority)])
 @pytest.mark.parametrize("target", ["ascendc", "pto"])
 @pytest.mark.parametrize("shape", [(1024, 1024)])
 def test_bitwise_or(dtype, target, shape):
@@ -3436,7 +3507,7 @@ pow_dtype_target_params = [
     ("float16", "ascendc"),
     ("float", "pto"),
     ("float16", "pto"),
-    ("int32", "ascendc"),
+    pytest.param("int32", "ascendc", marks=pytest.mark.low_priority),
 ]
 
 
@@ -3614,7 +3685,7 @@ def run_test_relu(M, N, block_M, block_N, dtype, target):
     torch.testing.assert_close(b, ref_b, rtol=1e-2, atol=1e-2)
 
 
-@pytest.mark.parametrize("dtype", ["float16", "float32", "int32"])
+@pytest.mark.parametrize("dtype", ["float16", "float32", pytest.param("int32", marks=pytest.mark.low_priority)])
 @pytest.mark.parametrize("target", ["ascendc", "pto"])
 @pytest.mark.parametrize("shape", [(1024, 1024)])
 def test_relu(dtype, target, shape):
@@ -4289,7 +4360,10 @@ def run_test_vec_sub(M, N, block_M, block_N, dtype, target):
     torch.testing.assert_close(c, ref_c, rtol=1e-2, atol=1e-2)
 
 
-@pytest.mark.parametrize("dtype", ["float", "float16", "int16", "int32"])
+@pytest.mark.parametrize(
+    "dtype",
+    ["float", "float16", pytest.param("int16", marks=pytest.mark.low_priority), pytest.param("int32", marks=pytest.mark.low_priority)],
+)
 @pytest.mark.parametrize("target", ["ascendc", "pto"])
 @pytest.mark.parametrize("shape", [(1024, 1024)])
 def test_vec_sub(dtype, target, shape):
@@ -4350,7 +4424,10 @@ def run_test_vec_subs(M, N, block_M, block_N, scalar, dtype, target):
     torch.testing.assert_close(b, ref_b, rtol=1e-2, atol=1e-2)
 
 
-@pytest.mark.parametrize("dtype", ["float", "float16", "int16", "int32"])
+@pytest.mark.parametrize(
+    "dtype",
+    ["float", "float16", pytest.param("int16", marks=pytest.mark.low_priority), pytest.param("int32", marks=pytest.mark.low_priority)],
+)
 @pytest.mark.parametrize("target", ["ascendc", "pto"])
 @pytest.mark.parametrize("shape", [(1024, 1024)])
 def test_vec_subs(dtype, target, shape):
@@ -4411,16 +4488,16 @@ def run_test_transpose(M, N, block_M, block_N, dtype, target):
 
 
 transpose_dtype_target_params = [
-    ("int16", "ascendc"),
-    ("int16", "pto"),
-    ("uint16", "ascendc"),
-    ("uint16", "pto"),
+    pytest.param("int16", "ascendc", marks=pytest.mark.low_priority),
+    pytest.param("int16", "pto", marks=pytest.mark.low_priority),
+    pytest.param("uint16", "ascendc", marks=pytest.mark.low_priority),
+    pytest.param("uint16", "pto", marks=pytest.mark.low_priority),
     ("float16", "ascendc"),
     ("float16", "pto"),
-    ("int32", "ascendc"),
+    pytest.param("int32", "ascendc", marks=pytest.mark.low_priority),
     pytest.param("int32", "pto", marks=pytest.mark.low_priority),
-    ("uint32", "ascendc"),
-    ("uint32", "pto"),
+    pytest.param("uint32", "ascendc", marks=pytest.mark.low_priority),
+    pytest.param("uint32", "pto", marks=pytest.mark.low_priority),
     ("float", "ascendc"),
     ("float", "pto"),
 ]
@@ -4433,9 +4510,22 @@ def test_transpose(dtype, target, shape):
     run_test_transpose(M, N, 16, 16, dtype, target)
 
 
-@pytest.mark.parametrize("dtype", ["float16", "float", "int16", "int32"])
+@pytest.mark.parametrize(
+    "dtype",
+    ["float16", "float", pytest.param("int16", marks=pytest.mark.low_priority), pytest.param("int32", marks=pytest.mark.low_priority)],
+)
 @pytest.mark.parametrize("target", ["ascendc", "pto"])
-@pytest.mark.parametrize("shape", [(32, 32), (64, 64), (32, 16), (16, 32), (64, 32), (32, 64)])
+@pytest.mark.parametrize(
+    "shape",
+    [
+        (32, 32),
+        (64, 64),
+        (32, 16),
+        pytest.param((16, 32), marks=pytest.mark.low_priority),
+        pytest.param((64, 32), marks=pytest.mark.low_priority),
+        pytest.param((32, 64), marks=pytest.mark.low_priority),
+    ],
+)
 def test_transpose_tiled(dtype, target, shape):
     M, N = shape
     run_test_transpose(M, N, M, N, dtype, target)
@@ -4443,13 +4533,18 @@ def test_transpose_tiled(dtype, target, shape):
 
 @pytest.mark.parametrize("dtype", ["float16"])
 @pytest.mark.parametrize("target", ["ascendc", "pto"])
-@pytest.mark.parametrize("shape", [(48, 48), (16, 48), (48, 16), (128, 128)])
+@pytest.mark.parametrize(
+    "shape",
+    [(48, 48), (128, 128), pytest.param((16, 48), marks=pytest.mark.low_priority), pytest.param((48, 16), marks=pytest.mark.low_priority)],
+)
 def test_transpose_block_b16(dtype, target, shape):
     M, N = shape
     run_test_transpose(M, N, M, N, dtype, target)
 
 
-@pytest.mark.parametrize("dtype", ["float", "uint32", "uint16"])
+@pytest.mark.parametrize(
+    "dtype", ["float", pytest.param("uint32", marks=pytest.mark.low_priority), pytest.param("uint16", marks=pytest.mark.low_priority)]
+)
 @pytest.mark.parametrize("target", ["ascendc", "pto"])
 @pytest.mark.parametrize("shape", [(16, 16), (32, 32)])
 def test_transpose_block_b32(dtype, target, shape):
@@ -4834,6 +4929,7 @@ def run_test_reduce_max(M, N, block_M, block_N, dim, dtype, target):
     torch.testing.assert_close(b, ref_b, rtol=1e-2, atol=1e-2)
 
 
+@pytest.mark.low_priority
 @pytest.mark.parametrize("dim", [-1])
 @pytest.mark.parametrize("dtype", ["float", "float16"])
 @pytest.mark.parametrize("target", ["ascendc", "pto"])
@@ -4884,6 +4980,7 @@ def run_test_reduce_min(M, N, block_M, block_N, dim, dtype, target):
     torch.testing.assert_close(b, ref_b, rtol=1e-2, atol=1e-2)
 
 
+@pytest.mark.low_priority
 @pytest.mark.parametrize("dim", [-1])
 @pytest.mark.parametrize("dtype", ["float", "float16"])
 @pytest.mark.parametrize("target", ["ascendc", "pto"])
@@ -4915,6 +5012,47 @@ def reduce_runtime_semantics_kernel(M, N, op, dim, clear=True, init_value=0.0, d
     return main
 
 
+def reduce_runtime_semantics_explicit_tmp_kernel(
+    M,
+    N,
+    op,
+    dim,
+    clear=True,
+    init_value=0.0,
+    dtype="float",
+    tmp_dtype="uint8",
+):
+    reduce_fn = _get_reduce_fn(op)
+    output_size = M if dim == -1 else N
+    arena_elements = 32768 // tilelang.tvm.DataType(tmp_dtype).itemsize()
+    region_start = 32 // tilelang.tvm.DataType(tmp_dtype).itemsize()
+
+    @T.prim_func
+    def main(
+        A: T.Tensor((M, N), dtype),  # type: ignore
+        B: T.Tensor((output_size,), dtype),  # type: ignore
+    ):
+        with T.Kernel(1, is_npu=True) as (_, vid):
+            a_ub = T.alloc_ub((M, N), dtype)
+            b_ub = T.alloc_ub((output_size,), dtype)
+            arena_ub = T.alloc_ub((arena_elements,), tmp_dtype)
+
+            if vid == 0:
+                T.copy(A, a_ub)
+                if not clear:
+                    T.tile.fill(b_ub, init_value)
+                reduce_fn(
+                    a_ub,
+                    b_ub,
+                    dim=dim,
+                    clear=clear,
+                    tmp=arena_ub[region_start:arena_elements],
+                )
+                T.copy(b_ub, B)
+
+    return main
+
+
 def reduce_runtime_reference(a, op, dim, clear=True, init_value=0.0):
     reduce_dim = 1 if dim == -1 else 0
     if op == "sum":
@@ -4935,9 +5073,25 @@ def reduce_runtime_reference(a, op, dim, clear=True, init_value=0.0):
     return torch.minimum(reduced, init)
 
 
-def run_test_reduce_runtime_semantics(op, dim, target, clear=True, init_value=0.0):
+def run_test_reduce_runtime_semantics(
+    op,
+    dim,
+    target,
+    clear=True,
+    init_value=0.0,
+    explicit_tmp=False,
+    tmp_dtype="uint8",
+):
     M, N = 64, 64
-    func = reduce_runtime_semantics_kernel(M, N, op, dim, clear=clear, init_value=init_value, dtype="float")
+    kernel_builder = reduce_runtime_semantics_explicit_tmp_kernel if explicit_tmp else reduce_runtime_semantics_kernel
+    builder_kwargs = {
+        "clear": clear,
+        "init_value": init_value,
+        "dtype": "float",
+    }
+    if explicit_tmp:
+        builder_kwargs["tmp_dtype"] = tmp_dtype
+    func = kernel_builder(M, N, op, dim, **builder_kwargs)
     func = tilelang.compile(func, out_idx=[-1], pass_configs=pass_configs, target=target)
 
     a = torch.randn(M, N, dtype=torch.float32).npu()
@@ -4945,10 +5099,13 @@ def run_test_reduce_runtime_semantics(op, dim, target, clear=True, init_value=0.
     b = func(a)
 
     ref_b = reduce_runtime_reference(a, op, dim, clear=clear, init_value=init_value)
+    torch.npu.synchronize()
     torch.testing.assert_close(b, ref_b, rtol=1e-2, atol=1e-2)
 
 
-@pytest.mark.parametrize("op", ["sum", "max", "min"])
+@pytest.mark.parametrize(
+    "op", ["sum", pytest.param("max", marks=pytest.mark.low_priority), pytest.param("min", marks=pytest.mark.low_priority)]
+)
 @pytest.mark.parametrize("target", ["ascendc", "pto"])
 def test_reduce_dim0_runtime_smoke(op, target):
     run_test_reduce_runtime_semantics(op, dim=0, target=target, clear=True)
@@ -4958,8 +5115,8 @@ def test_reduce_dim0_runtime_smoke(op, target):
     ("op", "init_value"),
     [
         pytest.param("sum", 1.25, id="sum"),
-        pytest.param("max", -0.5, id="max"),
-        pytest.param("min", 0.5, id="min"),
+        pytest.param("max", -0.5, id="max", marks=pytest.mark.low_priority),
+        pytest.param("min", 0.5, id="min", marks=pytest.mark.low_priority),
     ],
 )
 @pytest.mark.parametrize("target", ["ascendc", "pto"])
@@ -4967,38 +5124,62 @@ def test_reduce_clear_false_runtime_merge(op, init_value, target):
     run_test_reduce_runtime_semantics(op, dim=-1, target=target, clear=False, init_value=init_value)
 
 
-@pytest.mark.parametrize("op", ["sum", "max", "min"])
-def test_reduce_api_compat_positional_and_keyword(monkeypatch, op):
-    captured = []
+def test_reduce_explicit_typed_tmp_pto_clear_false_runtime():
+    run_test_reduce_runtime_semantics(
+        "sum",
+        dim=-1,
+        target="pto",
+        clear=False,
+        init_value=1.25,
+        explicit_tmp=True,
+        tmp_dtype="float32",
+    )
 
-    def fake_reduce_with_clear(buffer, out, reduce_type, dim, clear, real_shape):
-        captured.append((reduce_type, dim, clear, real_shape))
-        return "ok"
 
-    monkeypatch.setattr(reduce_ascend_lang, "_reduce_with_clear", fake_reduce_with_clear)
+def test_reduce_api_compat_positional_and_keyword(monkeypatch):
+    for op in ["sum", "max", "min"]:
+        captured = []
 
-    reduce_fn = _get_reduce_fn(op)
-    input_buffer = tir.decl_buffer((4, 8), "float32")
-    output_buffer = tir.decl_buffer((4,), "float32")
+        def fake_reduce_with_clear(
+            buffer,
+            out,
+            reduce_type,
+            dim,
+            clear,
+            real_shape,
+            tmp=None,
+            captured=captured,
+        ):
+            captured.append((reduce_type, dim, clear, real_shape, tmp))
+            return "ok"
 
-    assert reduce_fn(input_buffer, output_buffer, dim=-1) == "ok"
-    assert reduce_fn(input_buffer, output_buffer, dim=-1, clear=False) == "ok"
-    assert reduce_fn(input_buffer, output_buffer, -1, False) == "ok"
-    assert reduce_fn(input_buffer, output_buffer, dim=0, real_shape=[4, 8]) == "ok"
-    assert reduce_fn(input_buffer, output_buffer, 0, [4, 8]) == "ok"
-    assert reduce_fn(input_buffer, output_buffer, 0, [4, 8], False) == "ok"
-    assert reduce_fn(input_buffer, output_buffer, 0, False, [4, 8]) == "ok"
+        monkeypatch.setattr(reduce_ascend_lang, "_reduce_with_clear", fake_reduce_with_clear)
 
-    expected_reduce_type = f"reduce_{op}"
-    assert captured == [
-        (expected_reduce_type, -1, True, None),
-        (expected_reduce_type, -1, False, None),
-        (expected_reduce_type, -1, False, None),
-        (expected_reduce_type, 0, True, [4, 8]),
-        (expected_reduce_type, 0, True, [4, 8]),
-        (expected_reduce_type, 0, False, [4, 8]),
-        (expected_reduce_type, 0, False, [4, 8]),
-    ]
+        reduce_fn = _get_reduce_fn(op)
+        input_buffer = tir.decl_buffer((4, 8), "float32")
+        output_buffer = tir.decl_buffer((4,), "float32")
+
+        assert reduce_fn(input_buffer, output_buffer, dim=-1) == "ok"
+        assert reduce_fn(input_buffer, output_buffer, dim=-1, clear=False) == "ok"
+        assert reduce_fn(input_buffer, output_buffer, -1, False) == "ok"
+        assert reduce_fn(input_buffer, output_buffer, dim=0, real_shape=[4, 8]) == "ok"
+        assert reduce_fn(input_buffer, output_buffer, 0, [4, 8]) == "ok"
+        assert reduce_fn(input_buffer, output_buffer, 0, [4, 8], False) == "ok"
+        assert reduce_fn(input_buffer, output_buffer, 0, False, [4, 8]) == "ok"
+        tmp_buffer = tir.decl_buffer((256,), "uint8", scope="shared.ub")
+        assert reduce_fn(input_buffer, output_buffer, dim=-1, tmp=tmp_buffer) == "ok"
+
+        expected_reduce_type = f"reduce_{op}"
+        assert captured == [
+            (expected_reduce_type, -1, True, None, None),
+            (expected_reduce_type, -1, False, None, None),
+            (expected_reduce_type, -1, False, None, None),
+            (expected_reduce_type, 0, True, [4, 8], None),
+            (expected_reduce_type, 0, True, [4, 8], None),
+            (expected_reduce_type, 0, False, [4, 8], None),
+            (expected_reduce_type, 0, False, [4, 8], None),
+            (expected_reduce_type, -1, True, None, tmp_buffer),
+        ]
 
 
 @pytest.mark.parametrize("op", ["sum", "max", "min"])
@@ -5006,8 +5187,8 @@ def test_reduce_api_compat_positional_and_keyword(monkeypatch, op):
 def test_reduce_axis_legalization(monkeypatch, op, dim, expected_dim):
     captured = []
 
-    def fake_reduce_with_clear(buffer, out, reduce_type, dim, clear, real_shape):
-        captured.append((reduce_type, dim, clear, real_shape))
+    def fake_reduce_with_clear(buffer, out, reduce_type, dim, clear, real_shape, tmp=None):
+        captured.append((reduce_type, dim, clear, real_shape, tmp))
         return "ok"
 
     monkeypatch.setattr(reduce_ascend_lang, "_reduce_with_clear", fake_reduce_with_clear)
@@ -5017,7 +5198,77 @@ def test_reduce_axis_legalization(monkeypatch, op, dim, expected_dim):
     output_buffer = tir.decl_buffer((4,), "float32")
 
     assert reduce_fn(input_buffer, output_buffer, dim=dim) == "ok"
-    assert captured == [(f"reduce_{op}", expected_dim, True, None)]
+    assert captured == [(f"reduce_{op}", expected_dim, True, None, None)]
+
+
+def broadcast_explicit_tmp_kernel():
+    @T.prim_func
+    def main(
+        A: T.Tensor((1, 64), "float32"),  # type: ignore
+        B: T.Tensor((8, 64), "float32"),  # type: ignore
+    ):
+        with T.Kernel(1, is_npu=True) as (_, vid):
+            src_ub = T.alloc_ub((1, 64), "float32")
+            dst_ub = T.alloc_ub((8, 64), "float32")
+            arena_ub = T.alloc_ub((256,), "float16")
+            if vid == 0:
+                T.copy(A, src_ub)
+                T.tile.broadcast(dst_ub, src_ub, axis=0, tmp=arena_ub[16:256])
+                T.copy(dst_ub, B)
+
+    return main
+
+
+def test_broadcast_explicit_tmp_runtime():
+    kernel = tilelang.compile(
+        broadcast_explicit_tmp_kernel(),
+        out_idx=[-1],
+        pass_configs=pass_configs,
+        target="ascendc",
+    )
+    a = torch.randn(1, 64, dtype=torch.float32).npu()
+    b = kernel(a)
+
+    torch.npu.synchronize()
+    torch.testing.assert_close(b, a.expand(8, 64), rtol=1e-2, atol=1e-2)
+
+
+def sigmoid_round_implicit_workspace_kernel():
+    @T.prim_func
+    def main(
+        A: T.Tensor((64,), "float32"),  # type: ignore
+        B: T.Tensor((64,), "float32"),  # type: ignore
+        C: T.Tensor((64,), "float32"),  # type: ignore
+    ):
+        with T.Kernel(1, is_npu=True) as (_, vid):
+            src_ub = T.alloc_ub((64,), "float32")
+            round_src_ub = T.alloc_ub((64,), "float32")
+            sigmoid_ub = T.alloc_ub((64,), "float32")
+            round_ub = T.alloc_ub((64,), "float32")
+            if vid == 0:
+                T.copy(A, src_ub)
+                T.copy(A, round_src_ub)
+                T.tile.sigmoid(sigmoid_ub, src_ub)
+                T.tile.round(round_ub, round_src_ub, 64)
+                T.copy(sigmoid_ub, B)
+                T.copy(round_ub, C)
+
+    return main
+
+
+def test_sigmoid_and_float_round_implicit_workspace_runtime():
+    kernel = tilelang.compile(
+        sigmoid_round_implicit_workspace_kernel(),
+        out_idx=[-2, -1],
+        pass_configs=pass_configs,
+        target="ascendc",
+    )
+    a = (torch.randn(64, dtype=torch.float32) * 3).npu()
+    sigmoid_out, round_out = kernel(a)
+
+    torch.npu.synchronize()
+    torch.testing.assert_close(sigmoid_out, torch.sigmoid(a), rtol=1e-4, atol=1e-4)
+    torch.testing.assert_close(round_out, torch.round(a), rtol=0, atol=0)
 
 
 @pytest.mark.parametrize("op", ["sum", "max", "min"])
@@ -5135,6 +5386,110 @@ def row_expand_sub_experiment_kernel(M, N, dtype="float16"):
 
 def row_expand_div_experiment_kernel(M, N, dtype="float16"):
     return _row_expand_binop_experiment_kernel(M, N, "row_expand_div_experiment", dtype)
+
+
+def row_expand_mul_multistage_region_kernel():
+    stages = 2
+    rows_per_stage = 8
+    cols = 64
+    lanes = 8
+
+    @T.prim_func
+    def main(
+        A: T.Tensor((stages, rows_per_stage, cols), "float"),  # type: ignore
+        Packed: T.Tensor((stages, rows_per_stage, lanes), "float"),  # type: ignore
+        C: T.Tensor((stages, rows_per_stage, cols), "float"),  # type: ignore
+    ):
+        with T.Kernel(1, is_npu=True):
+            a_ring = T.alloc_ub((stages + 1, rows_per_stage, cols), "float")
+            packed_ring = T.alloc_ub((stages + 1, rows_per_stage, lanes), "float")
+            c_ring = T.alloc_ub((stages + 1, rows_per_stage, cols), "float")
+
+            for stage in T.serial(stages):
+                T.copy(A[stage, :, :], a_ring[stage + 1, :, :])
+                T.copy(Packed[stage, :, :], packed_ring[stage + 1, :, :])
+            T.tile.row_expand_mul_experiment(
+                c_ring[1:3, :, :],
+                a_ring[1:3, :, :],
+                packed_ring[1:3, :, :],
+            )
+            for stage in T.serial(stages):
+                T.copy(c_ring[stage + 1, :, :], C[stage, :, :])
+
+    return main
+
+
+def test_row_expand_experiment_folds_and_validates_regions():
+    op = T.tile.row_expand_mul_experiment
+    stage = tir.Var("stage", "int32")
+    dst_ring = tir.decl_buffer((3, 8, 64), "float32", scope="shared.ub")
+    src_ring = tir.decl_buffer((3, 8, 64), "float32", scope="shared.ub")
+    packed_ring = tir.decl_buffer((3, 8, 8), "float32", scope="shared.ub")
+
+    singleton = op(dst_ring[stage, :, :], src_ring[stage, :, :], packed_ring[stage, :, :])
+    multistage = op(dst_ring[1:3, :, :], src_ring[1:3, :, :], packed_ring[1:3, :, :])
+    whole_buffer = op(dst_ring, src_ring, packed_ring)
+
+    assert int(singleton.args[1].args[3]) == 8 * 64
+    assert int(singleton.args[3].args[3]) == 8 * 8
+    assert int(multistage.args[1].args[3]) == 2 * 8 * 64
+    assert int(multistage.args[3].args[3]) == 2 * 8 * 8
+    assert int(whole_buffer.args[1].args[3]) == 3 * 8 * 64
+    assert int(whole_buffer.args[3].args[3]) == 3 * 8 * 8
+
+    chunk = tir.Var("chunk", "int32")
+    wide_dst = tir.decl_buffer((8, 128), "float32", scope="shared.ub")
+    wide_src = tir.decl_buffer((8, 128), "float32", scope="shared.ub")
+    symbolic_window = op(
+        wide_dst[:, chunk * 64 : (chunk + 1) * 64],
+        wide_src[:, chunk * 64 : (chunk + 1) * 64],
+        tir.decl_buffer((8, 8), "float32", scope="shared.ub"),
+    )
+    assert int(symbolic_window.args[1].args[3]) == 8 * 64
+
+    dst = tir.decl_buffer((64, 64), "float32", scope="shared.ub")
+    src = tir.decl_buffer((64, 64), "float32", scope="shared.ub")
+    extra_rows = tir.decl_buffer((2, 64, 8), "float32", scope="shared.ub")
+    mismatch = r"src1 scalar count must match dst rows: src1=128, dst\[0\]=64"
+    with pytest.raises(ValueError, match=mismatch):
+        op(dst, src, extra_rows)
+
+    packed_ring = tir.decl_buffer((2, 128, 8), "float32", scope="shared.ub")
+    with pytest.raises(ValueError, match="must be contiguous when flattened"):
+        op(dst, src, packed_ring[0:2, 0:64, :])
+
+    scalar = tir.decl_buffer((64,), "float32", scope="shared.ub")
+    with pytest.raises(ValueError, match="packed src1 shape"):
+        op(dst, src, scalar)
+    with pytest.raises(ValueError, match="packed src1 shape"):
+        op(dst, src, scalar[:])
+
+    dst_fp16 = tir.decl_buffer((16, 128), "float16", scope="shared.ub")
+    src_fp16 = tir.decl_buffer((16, 128), "float16", scope="shared.ub")
+    scalar_ring = tir.decl_buffer((3, 8, 1), "float16", scope="shared.ub")
+    tmp_fp16 = tir.decl_buffer((16, 16), "float16", scope="shared.ub")
+    with pytest.raises(ValueError, match="32-byte-aligned access offset"):
+        op(dst_fp16, src_fp16, scalar_ring[1:3, :, :], tmp_fp16)
+
+
+@pytest.mark.parametrize("target", ["ascendc", "pto"])
+def test_row_expand_mul_experiment_multistage_region(target):
+    func = tilelang.compile(
+        row_expand_mul_multistage_region_kernel(),
+        out_idx=[-1],
+        pass_configs=pass_configs,
+        target=target,
+    )
+
+    a = torch.arange(1, 2 * 8 * 64 + 1, dtype=torch.float32).reshape(2, 8, 64) / 64
+    scalars = torch.arange(1, 2 * 8 + 1, dtype=torch.float32).reshape(2, 8) / 4
+    packed_scalars = scalars.unsqueeze(-1).expand(2, 8, 8).contiguous()
+
+    c = func(a.npu(), packed_scalars.npu())
+    torch.npu.synchronize()
+    ref_c = a * scalars.unsqueeze(-1)
+
+    torch.testing.assert_close(c.cpu(), ref_c, rtol=1e-5, atol=1e-5)
 
 
 @pytest.mark.parametrize("dtype,shape", [("float16", (16, 128)), ("float", (16, 64))])

@@ -150,6 +150,12 @@ private:
 
   void TailReduceOpCodegen(const CallNode *op);
 
+  void TailCompareOpCodegen(const CallNode *op, bool scalar);
+
+  void TailSelectOpCodegen(const CallNode *op);
+
+  void TailBroadcastOpCodegen(const CallNode *op);
+
   void RowExpandMulCodegen(const CallNode *op);
 
   void RowExpandMulExperimentCodegen(const CallNode *op);
@@ -275,9 +281,13 @@ private:
 
   bool use_swizzle_{false};
 
+  bool enable_exception_dump_{false};
+
   std::string platform_;
 
   Map<Var, Array<PrimExpr>> buffer_shapes_;
+
+  std::unordered_map<const VarNode *, DataType> buffer_dtypes_;
 };
 
 } // namespace codegen
