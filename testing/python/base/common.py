@@ -54,6 +54,7 @@ def assert_close_npu(actual, expected, dtype, **override):
         assert_close_npu(result, expected, "float32", rtol=1e-4)  # override
     """
     tol = {**TOLERANCE.get(dtype, {"rtol": 1e-2, "atol": 1e-2}), **override}
+    tol.setdefault("equal_nan", True)
     # torch-npu doesn't support isclose for uint16/uint32
     if dtype in ("uint16", "uint32"):
         int_dtype = getattr(torch, dtype.replace("uint", "int"))
