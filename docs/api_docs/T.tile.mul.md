@@ -22,7 +22,7 @@ def mul(
 |--------|----------|------|------|----------|
 | dst | 输出 | 存放运算结果 | 张量（tensor） | 必填 |
 | src0 | 输入 | 第一个源操作数 | 张量（tensor） | 必填 |
-| src1 | 输入 | 第二个源操作数，支持 tensor、buffer 单元素（BufferLoad）或 scalar | 张量（tensor）/ 标量（scalar） | 必填 |
+| src1 | 输入 | 第二个源操作数，支持 tensor 或 scalar | 张量（tensor）/ 标量（scalar） | 必填 |
 
 > **类型说明**：
 > - **tensor**：通过 `T.alloc_ub`、`T.alloc_shared` 等分配的缓冲区（Buffer），或其切片（BufferRegion）
@@ -43,14 +43,6 @@ def mul(
 - 支持 1D 和 2D
 - 支持整行切片（如 `buf[2, :]`）及覆盖完整最后一维的连续多行区域（如 `buf[0:2, :]`）
 - 更高维 buffer 需通过切片降维为 1D/2D 的 BufferRegion 传入
-
-#### 2.3.3 src1 形式说明
-
-| src1 形式 | 底层实现 | 说明 |
-|-----------|---------|------|
-| tensor（Buffer/BufferRegion） | `AscendC::Mul` | 逐元素相乘，dst/src0/src1 大小须一致 |
-| scalar（PrimExpr/float/int） | `AscendC::Muls` | dst[i] = src0[i] * 标量，标量自动转换为 buffer dtype |
-| BufferLoad（1D 单元素） | `AscendC::Muls`（`GetValue(index)` 取标量） | dst[i] = src0[i] * buffer[index] |
 
 ### 2.4 约束条件
 

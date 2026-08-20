@@ -22,7 +22,7 @@ def div(
 |--------|----------|------|------|----------|
 | dst | 输出 | 存放运算结果 | 张量（tensor） | 必填 |
 | src0 | 输入 | 第一个源操作数（被除数） | 张量（tensor） | 必填 |
-| src1 | 输入 | 第二个源操作数（除数），支持 tensor、buffer 单元素（BufferLoad）或 scalar；除数为 0 时行为与 IEEE 754 不一致（实测：非零/0 得 ±inf，0/0 得 +inf 而非 NaN） | 张量（tensor）/ 标量（scalar） | 必填 |
+| src1 | 输入 | 第二个源操作数（除数），支持 tensor 或 scalar；除数为 0 时行为与 IEEE 754 不一致（实测：非零/0 得 ±inf，0/0 得 +inf 而非 NaN） | 张量（tensor）/ 标量（scalar） | 必填 |
 
 > **类型说明**：
 > - **tensor**：通过 `T.alloc_ub`、`T.alloc_shared` 等分配的缓冲区（Buffer），或其切片（BufferRegion）
@@ -44,14 +44,6 @@ def div(
 - 支持 1D 和 2D
 - 支持整行切片（如 `buf[2, :]`）及覆盖完整最后一维的连续多行区域（如 `buf[0:2, :]`）
 - 更高维 buffer 需通过切片降维为 1D/2D 的 BufferRegion 传入
-
-#### 2.3.3 src1 形式说明
-
-| src1 形式 | 底层实现 | 说明 |
-|-----------|---------|------|
-| tensor（Buffer/BufferRegion） | `AscendC::Div` | 逐元素相除，dst/src0/src1 大小须一致 |
-| scalar（PrimExpr/float/int） | `AscendC::Muls`（标量取倒数） | dst[i] = src0[i] * (1.0f / src1)，非 2 的幂次除数有额外舍入误差 |
-| BufferLoad（1D 单元素） | `AscendC::Muls`（`GetValue(index)` 取倒数） | dst[i] = src0[i] * (1.0f / buffer[index]) |
 
 ### 2.4 约束条件
 
