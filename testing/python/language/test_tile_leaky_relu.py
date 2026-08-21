@@ -1,25 +1,25 @@
 """T.tile.leaky_relu test suite.
 
+Registered against the shared unary-op framework in testing/python/base/
+with a custom kernel factory (the API takes a scalar slope argument,
+so the generic 2-buffer kernel does not apply).
+Developer mode via DEFAULT_PASS_CONFIGS (auto sync + memory planning).
+
 API: T.tile.leaky_relu(dst, src0, scalar_value)
-     dst = src0 if src0 >= 0 else src0 * alpha
+     dst = src0 if src0 >= 0 else src0 * scalar_value
 """
 
-import pytest
-import torch
+import torch.nn.functional as F
 
-import tilelang
 import tilelang.language as T
 
-from base import DTYPE_MAP, DEFAULT_PASS_CONFIGS, assert_close_npu, make_test_data
+from base import UnaryOpSpec, register_unary_op_tests
 
 ALPHA = 0.1
 
 
-# ---------------------------------------------------------------------------
-# Kernel factory
-# ---------------------------------------------------------------------------
-
-def kernel_leaky_relu(M, N, block_M, block_N, dtype="float"):
+def make_leaky_relu_kernel(M, N, block_M, block_N, dtype="float"):
+    """Factory: leaky_relu(src, alpha) -> dst."""
     m_num = M // block_M
     n_num = N // block_N
     VEC_NUM = 2
@@ -41,203 +41,93 @@ def kernel_leaky_relu(M, N, block_M, block_N, dtype="float"):
     return main
 
 
-# ---------------------------------------------------------------------------
-# Spec (for conftest dtype parametrization)
-# ---------------------------------------------------------------------------
+def make_leaky_relu_1d_kernel(N, dtype="float"):
+    """Factory: leaky_relu(src, alpha) -> dst on 1D buffers."""
 
-class _LeakyReluSpec:
-    name = "leaky_relu"
-    supported_dtypes = ["float16", "float32"]
+    @T.prim_func
+    def main(
+        A: T.Tensor((N,), dtype),  # type: ignore
+        B: T.Tensor((N,), dtype),  # type: ignore
+    ):
+        with T.Kernel(1, is_npu=True) as (cid, vid):
+            a_ub = T.alloc_ub((N,), dtype)
+            b_ub = T.alloc_ub((N,), dtype)
+            T.copy(A, a_ub)
+            T.tile.leaky_relu(b_ub, a_ub, ALPHA)
+            T.copy(b_ub, B)
 
-
-_spec = _LeakyReluSpec()
-
-
-# ---------------------------------------------------------------------------
-# Golden
-# ---------------------------------------------------------------------------
-
-def _golden(a):
-    return torch.nn.functional.leaky_relu(a, negative_slope=ALPHA)
+    return main
 
 
-# ---------------------------------------------------------------------------
-# Compile tests
-# ---------------------------------------------------------------------------
+def make_leaky_relu_slice_kernel(M, N, dtype="float"):
+    """Factory: leaky_relu on the top half of a 2D buffer (BufferRegion)."""
 
-@pytest.mark.compile_time
-class TestTileLeakyReluCompile:
-    op = _spec
-    _dtype_source = "supported_dtypes"
+    @T.prim_func
+    def main(
+        A: T.Tensor((M, N), dtype),  # type: ignore
+        B: T.Tensor((M, N), dtype),  # type: ignore
+    ):
+        with T.Kernel(1, is_npu=True) as (cid, vid):
+            a_ub = T.alloc_ub((M, N), dtype)
+            b_ub = T.alloc_ub((M, N), dtype)
+            T.copy(A, a_ub)
+            T.tile.leaky_relu(b_ub[0 : M // 2, :], a_ub[0 : M // 2, :], ALPHA)
+            T.copy(b_ub, B)
 
-    @pytest.mark.l0
-    def test_compiles(self, dtype):
-        func = kernel_leaky_relu(128, 128, 64, 64, dtype)
-        compiled = tilelang.compile(
-            func, out_idx=[-1], pass_configs=DEFAULT_PASS_CONFIGS, target="ascendc"
-        )
-        assert callable(compiled)
-
-    @pytest.mark.l0
-    @pytest.mark.parametrize("target", ["ascendc", "pto"])
-    def test_compiles_both_targets(self, dtype, target):
-        func = kernel_leaky_relu(128, 128, 64, 64, dtype)
-        compiled = tilelang.compile(
-            func, out_idx=[-1], pass_configs=DEFAULT_PASS_CONFIGS, target=target
-        )
-        assert callable(compiled)
-
-    @pytest.mark.l1
-    @pytest.mark.parametrize("shape", [(64, 64), (128, 256), (256, 128)])
-    def test_various_shapes_compile(self, shape):
-        M, N = shape
-        func = kernel_leaky_relu(M, N, 64, 64, _spec.supported_dtypes[0])
-        compiled = tilelang.compile(
-            func, out_idx=[-1], pass_configs=DEFAULT_PASS_CONFIGS, target="ascendc"
-        )
-        assert callable(compiled)
+    return main
 
 
-# ---------------------------------------------------------------------------
-# E2E tests
-# ---------------------------------------------------------------------------
+def make_leaky_relu_inplace_kernel(M, N, dtype="float"):
+    """Factory: leaky_relu in-place on a single UB buffer (dst aliases src)."""
 
-class TestTileLeakyReluE2E:
-    op = _spec
-    _dtype_source = "supported_dtypes"
+    @T.prim_func
+    def main(
+        A: T.Tensor((M, N), dtype),  # type: ignore
+        B: T.Tensor((M, N), dtype),  # type: ignore
+    ):
+        with T.Kernel(1, is_npu=True) as (cid, vid):
+            a_ub = T.alloc_ub((M, N), dtype)
+            T.copy(A, a_ub)
+            T.tile.leaky_relu(a_ub, a_ub, ALPHA)
+            T.copy(a_ub, B)
 
-    @pytest.mark.l0
-    @pytest.mark.parametrize("target", ["ascendc", "pto"])
-    def test_basic(self, dtype, target):
-        M, N, block_M, block_N = 1024, 1024, 128, 128
-        func = kernel_leaky_relu(M, N, block_M, block_N, dtype=dtype)
-        compiled = tilelang.compile(
-            func, out_idx=[-1], pass_configs=DEFAULT_PASS_CONFIGS, target=target
-        )
-        a = make_test_data((M, N), dtype)
-        torch.npu.synchronize()
-        b = compiled(a)
-        assert_close_npu(b, _golden(a), dtype)
-
-    @pytest.mark.l1
-    @pytest.mark.parametrize("M,N,block_M,block_N", [
-        (256, 256, 64, 64),
-        (512, 1024, 64, 128),
-        (1024, 512, 128, 64),
-    ])
-    @pytest.mark.parametrize("target", ["ascendc", "pto"])
-    def test_various_shapes(self, M, N, block_M, block_N, dtype, target):
-        func = kernel_leaky_relu(M, N, block_M, block_N, dtype=dtype)
-        compiled = tilelang.compile(
-            func, out_idx=[-1], pass_configs=DEFAULT_PASS_CONFIGS, target=target
-        )
-        a = make_test_data((M, N), dtype)
-        torch.npu.synchronize()
-        b = compiled(a)
-        assert_close_npu(b, _golden(a), dtype)
-
-    @pytest.mark.l1
-    @pytest.mark.parametrize("M,N", [(100, 200), (107, 145), (255, 513)])
-    @pytest.mark.parametrize("target", ["ascendc", "pto"])
-    def test_non_aligned_shapes(self, M, N, dtype, target):
-        block_M = 64 if M >= 64 else 32
-        block_N = 64 if N >= 64 else 32
-        M_aligned = (M // block_M) * block_M
-        N_aligned = (N // block_N) * block_N
-        func = kernel_leaky_relu(M_aligned, N_aligned, block_M, block_N, dtype=dtype)
-        compiled = tilelang.compile(
-            func, out_idx=[-1], pass_configs=DEFAULT_PASS_CONFIGS, target=target
-        )
-        a = make_test_data((M_aligned, N_aligned), dtype)
-        torch.npu.synchronize()
-        b = compiled(a)
-        assert_close_npu(b, _golden(a), dtype)
+    return main
 
 
-# ---------------------------------------------------------------------------
-# Boundary tests
-# ---------------------------------------------------------------------------
+leaky_relu_spec = UnaryOpSpec(
+    name="leaky_relu",
+    tile_op=T.tile.leaky_relu,
+    golden=lambda a: F.leaky_relu(a, negative_slope=ALPHA),
+    supported_dtypes=["float16", "float32"],
+    low_priority_dtypes=["float32"],
+    kernel_tensor=make_leaky_relu_kernel,
+    kernel_1d=make_leaky_relu_1d_kernel,
+    kernel_slice=make_leaky_relu_slice_kernel,
+    kernel_inplace=make_leaky_relu_inplace_kernel,
+)
 
-class TestTileLeakyReluBoundary:
-    op = _spec
-    _dtype_source = "supported_dtypes"
+classes = register_unary_op_tests(leaky_relu_spec)
 
-    @pytest.mark.l2
-    @pytest.mark.parametrize("target", ["ascendc", "pto"])
-    def test_zeros(self, dtype, target):
-        torch_dtype = DTYPE_MAP[dtype]
-        a = torch.zeros(256, 256, dtype=torch_dtype, device="npu")
-        func = kernel_leaky_relu(256, 256, 64, 64, dtype)
-        compiled = tilelang.compile(
-            func, out_idx=[-1], pass_configs=DEFAULT_PASS_CONFIGS, target=target
-        )
-        torch.npu.synchronize()
-        b = compiled(a)
-        assert_close_npu(b, _golden(a), dtype)
 
-    @pytest.mark.l2
-    @pytest.mark.parametrize("target", ["ascendc", "pto"])
-    def test_negative_values(self, dtype, target):
-        torch_dtype = DTYPE_MAP[dtype]
-        a = torch.full((256, 256), -5.0, dtype=torch_dtype, device="npu")
-        func = kernel_leaky_relu(256, 256, 64, 64, dtype)
-        compiled = tilelang.compile(
-            func, out_idx=[-1], pass_configs=DEFAULT_PASS_CONFIGS, target=target
-        )
-        torch.npu.synchronize()
-        b = compiled(a)
-        assert_close_npu(b, _golden(a), dtype)
+if __name__ == "__main__":
+    import argparse
 
-    @pytest.mark.l2
-    @pytest.mark.parametrize("target", ["ascendc", "pto"])
-    def test_large_values(self, dtype, target):
-        torch_dtype = DTYPE_MAP[dtype]
-        if dtype == "float32":
-            a = torch.full((256, 256), 1e30, dtype=torch_dtype, device="npu")
-        else:
-            a = torch.full((256, 256), 60000.0, dtype=torch_dtype, device="npu")
-        func = kernel_leaky_relu(256, 256, 64, 64, dtype)
-        compiled = tilelang.compile(
-            func, out_idx=[-1], pass_configs=DEFAULT_PASS_CONFIGS, target=target
-        )
-        torch.npu.synchronize()
-        b = compiled(a)
-        assert b.shape == (256, 256)
+    parser = argparse.ArgumentParser(description="Run T.tile.leaky_relu tests.")
+    parser.add_argument("--dtype", default="float16", choices=["float16", "float32"])
+    parser.add_argument("--target", default="ascendc", choices=["ascendc", "pto"])
+    parser.add_argument("--M", type=int, default=1024)
+    parser.add_argument("--N", type=int, default=1024)
+    args = parser.parse_args()
 
-    @pytest.mark.l2
-    @pytest.mark.parametrize("target", ["ascendc", "pto"])
-    def test_inf_input(self, target):
-        a = torch.full((256, 256), float("inf"), dtype=torch.float16, device="npu")
-        func = kernel_leaky_relu(256, 256, 64, 64, "float16")
-        compiled = tilelang.compile(
-            func, out_idx=[-1], pass_configs=DEFAULT_PASS_CONFIGS, target=target
-        )
-        torch.npu.synchronize()
-        b = compiled(a)
-        assert b.shape == (256, 256)
-        assert torch.all(torch.isinf(b))
+    from base.unary_op import run_unary_op
 
-    @pytest.mark.l2
-    @pytest.mark.parametrize("target", ["ascendc", "pto"])
-    def test_nan_input(self, target):
-        a = torch.full((256, 256), float("nan"), dtype=torch.float16, device="npu")
-        func = kernel_leaky_relu(256, 256, 64, 64, "float16")
-        compiled = tilelang.compile(
-            func, out_idx=[-1], pass_configs=DEFAULT_PASS_CONFIGS, target=target
-        )
-        torch.npu.synchronize()
-        b = compiled(a)
-        assert b.shape == (256, 256)
-        assert torch.all(torch.isnan(b))
-
-    @pytest.mark.l2
-    @pytest.mark.parametrize("target", ["ascendc", "pto"])
-    def test_minimum_shape(self, dtype, target):
-        func = kernel_leaky_relu(64, 64, 64, 64, dtype=dtype)
-        compiled = tilelang.compile(
-            func, out_idx=[-1], pass_configs=DEFAULT_PASS_CONFIGS, target=target
-        )
-        a = make_test_data((64, 64), dtype)
-        torch.npu.synchronize()
-        b = compiled(a)
-        assert_close_npu(b, _golden(a), dtype)
+    run_unary_op(
+        leaky_relu_spec.kernel_tensor,
+        args.M,
+        args.N,
+        128,
+        128,
+        args.dtype,
+        args.target,
+        golden_fn=leaky_relu_spec.golden,
+    )
