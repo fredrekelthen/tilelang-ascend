@@ -13,16 +13,16 @@ import tilelang
 # Precision tolerance table — graded by dtype (NOT a flat 1e-2 for all)
 # ---------------------------------------------------------------------------
 TOLERANCE = {
-    "float32":  {"rtol": 1e-5, "atol": 1e-5},
-    "float":    {"rtol": 1e-5, "atol": 1e-5},
-    "float16":  {"rtol": 1e-3, "atol": 1e-3},
+    "float32": {"rtol": 1e-5, "atol": 1e-5},
+    "float": {"rtol": 1e-5, "atol": 1e-5},
+    "float16": {"rtol": 1e-3, "atol": 1e-3},
     "bfloat16": {"rtol": 7.8e-3, "atol": 7.8e-3},
-    "int8":     {"rtol": 0, "atol": 0},
-    "int16":    {"rtol": 0, "atol": 0},
-    "int32":    {"rtol": 0, "atol": 0},
-    "uint8":    {"rtol": 0, "atol": 0},
-    "uint16":   {"rtol": 0, "atol": 0},
-    "uint32":   {"rtol": 0, "atol": 0},
+    "int8": {"rtol": 0, "atol": 0},
+    "int16": {"rtol": 0, "atol": 0},
+    "int32": {"rtol": 0, "atol": 0},
+    "uint8": {"rtol": 0, "atol": 0},
+    "uint16": {"rtol": 0, "atol": 0},
+    "uint32": {"rtol": 0, "atol": 0},
 }
 
 
@@ -30,16 +30,16 @@ TOLERANCE = {
 # TileLang dtype string  →  torch dtype
 # ---------------------------------------------------------------------------
 DTYPE_MAP = {
-    "float":    torch.float32,
-    "float32":  torch.float32,
-    "float16":  torch.float16,
+    "float": torch.float32,
+    "float32": torch.float32,
+    "float16": torch.float16,
     "bfloat16": torch.bfloat16,
-    "int8":     torch.int8,
-    "int16":    torch.int16,
-    "int32":    torch.int32,
-    "uint8":    torch.uint8,
-    "uint16":   torch.uint16,
-    "uint32":   torch.uint32,
+    "int8": torch.int8,
+    "int16": torch.int16,
+    "int32": torch.int32,
+    "uint8": torch.uint8,
+    "uint16": torch.uint16,
+    "uint32": torch.uint32,
 }
 
 
@@ -90,5 +90,6 @@ DEFAULT_PASS_CONFIGS = {
 
 def skip_if_missing(op, attr):
     import pytest
+
     if not getattr(op, attr):
         pytest.skip(f"No {attr}")
