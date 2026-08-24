@@ -140,13 +140,11 @@ class UnaryOpSpec:
         return make_unary_slice_kernel(self.tile_op)
 
 
-@pytest.mark.compile_time
 @pytest.mark.usefixtures("disable_tilelang_cache", "random_seed")
 class _UnaryOpCompile:
     op = None
     _dtype_source = "supported_dtypes"
 
-    @pytest.mark.l0
     @pytest.mark.parametrize("target", target_params())
     def test_compiles(self, dtype, target):
         skip_if_missing(self.op, "kernel_tensor")
@@ -160,7 +158,6 @@ class _UnaryOpE2E:
     op = None
     _dtype_source = "supported_dtypes"
 
-    @pytest.mark.l0
     @pytest.mark.parametrize("target", target_params())
     def test_basic_1024x1024(self, dtype, target):
         skip_if_missing(self.op, "kernel_tensor")
@@ -176,7 +173,6 @@ class _UnaryOpE2E:
             tol=self.op.tol,
         )
 
-    @pytest.mark.l1
     @pytest.mark.low_priority
     @pytest.mark.parametrize("M,N", [(512, 1024)])
     @pytest.mark.parametrize("target", target_params())
@@ -194,7 +190,6 @@ class _UnaryOpE2E:
             tol=self.op.tol,
         )
 
-    @pytest.mark.l1
     @pytest.mark.low_priority
     @pytest.mark.parametrize("target", target_params())
     def test_1d(self, dtype, target):
@@ -206,7 +201,6 @@ class _UnaryOpE2E:
         b = compiled(a)
         assert_close_npu(b, self.op.golden(a), dtype, **(self.op.tol or {}))
 
-    @pytest.mark.l1
     @pytest.mark.low_priority
     @pytest.mark.parametrize("target", target_params())
     def test_row_slice_2d(self, dtype, target):
@@ -226,7 +220,7 @@ class _UnaryOpBoundary:
     op = None
     _dtype_source = "boundary_dtypes"
 
-    @pytest.mark.l2
+    @pytest.mark.low_priority
     @pytest.mark.low_priority
     @pytest.mark.parametrize("target", target_params())
     def test_large_values(self, dtype, target):
@@ -242,7 +236,7 @@ class _UnaryOpBoundary:
         b = compiled(a)
         assert b.shape == (256, 256)
 
-    @pytest.mark.l2
+    @pytest.mark.low_priority
     @pytest.mark.parametrize("target", target_params())
     def test_zeros(self, dtype, target):
         skip_if_missing(self.op, "kernel_tensor")
@@ -254,7 +248,7 @@ class _UnaryOpBoundary:
         b = compiled(a)
         assert_close_npu(b, self.op.golden(a), dtype, **(self.op.tol or {}))
 
-    @pytest.mark.l2
+    @pytest.mark.low_priority
     @pytest.mark.low_priority
     @pytest.mark.parametrize("target", target_params())
     def test_negative_values(self, dtype, target):
@@ -267,7 +261,7 @@ class _UnaryOpBoundary:
         b = compiled(a)
         assert_close_npu(b, self.op.golden(a), dtype, **(self.op.tol or {}))
 
-    @pytest.mark.l2
+    @pytest.mark.low_priority
     @pytest.mark.low_priority
     @pytest.mark.parametrize("special", ["inf", "nan"])
     @pytest.mark.parametrize("target", target_params())
@@ -288,7 +282,7 @@ class _UnaryOpBoundary:
         else:
             assert torch.all(torch.isnan(b))
 
-    @pytest.mark.l2
+    @pytest.mark.low_priority
     @pytest.mark.low_priority
     @pytest.mark.parametrize("target", target_params())
     def test_minimum_shape(self, dtype, target):
