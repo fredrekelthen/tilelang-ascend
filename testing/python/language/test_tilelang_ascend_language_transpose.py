@@ -102,18 +102,18 @@ def run_test_transpose(M, N, dtype, target):
 # 16x16 hardware-instruction path (AscendC::Transpose)
 # -----------------------------------------------------------------------------
 transpose_dtype_target_params = [
-    ("int16", "ascendc"),
-    ("int16", "pto"),
-    ("uint16", "ascendc"),
-    ("uint16", "pto"),
+    pytest.param("int16", "ascendc", marks=pytest.mark.low_priority),
+    pytest.param("int16", "pto", marks=pytest.mark.low_priority),
+    pytest.param("uint16", "ascendc", marks=pytest.mark.low_priority),
+    pytest.param("uint16", "pto", marks=pytest.mark.low_priority),
     ("float16", "ascendc"),
-    ("float16", "pto"),
-    ("int32", "ascendc"),
+    pytest.param("float16", "pto", marks=pytest.mark.low_priority),
+    pytest.param("int32", "ascendc", marks=pytest.mark.low_priority),
     pytest.param("int32", "pto", marks=pytest.mark.low_priority),
-    ("uint32", "ascendc"),
-    ("uint32", "pto"),
-    ("float32", "ascendc"),
-    ("float32", "pto"),
+    pytest.param("uint32", "ascendc", marks=pytest.mark.low_priority),
+    pytest.param("uint32", "pto", marks=pytest.mark.low_priority),
+    pytest.param("float32", "ascendc", marks=pytest.mark.low_priority),
+    pytest.param("float32", "pto", marks=pytest.mark.low_priority),
 ]
 
 
@@ -127,21 +127,24 @@ def test_transpose_16x16(dtype, target, shape):
 # -----------------------------------------------------------------------------
 # Block-transpose path (TransDataTo5HD): B16, H/W multiples of 16, non-16x16
 # -----------------------------------------------------------------------------
-@pytest.mark.parametrize("dtype", ["float16", "int16", "uint16"])
-@pytest.mark.parametrize("target", ["ascendc", "pto"])
+@pytest.mark.parametrize(
+    "dtype",
+    ["float16", pytest.param("int16", marks=pytest.mark.low_priority), pytest.param("uint16", marks=pytest.mark.low_priority)],
+)
+@pytest.mark.parametrize("target", ["ascendc", pytest.param("pto", marks=pytest.mark.low_priority)])
 @pytest.mark.parametrize(
     "shape",
     [
         (32, 32),
-        (64, 64),
-        (32, 16),
-        (16, 32),
-        (64, 32),
-        (32, 64),
-        (48, 48),
-        (16, 48),
-        (48, 16),
-        (128, 128),
+        pytest.param((64, 64), marks=pytest.mark.low_priority),
+        pytest.param((32, 16), marks=pytest.mark.low_priority),
+        pytest.param((16, 32), marks=pytest.mark.low_priority),
+        pytest.param((64, 32), marks=pytest.mark.low_priority),
+        pytest.param((32, 64), marks=pytest.mark.low_priority),
+        pytest.param((48, 48), marks=pytest.mark.low_priority),
+        pytest.param((16, 48), marks=pytest.mark.low_priority),
+        pytest.param((48, 16), marks=pytest.mark.low_priority),
+        pytest.param((128, 128), marks=pytest.mark.low_priority),
     ],
 )
 def test_transpose_block_b16(dtype, target, shape):
@@ -152,19 +155,22 @@ def test_transpose_block_b16(dtype, target, shape):
 # -----------------------------------------------------------------------------
 # Block-transpose path (TransDataTo5HD): B32, H/W multiples of 16
 # -----------------------------------------------------------------------------
-@pytest.mark.parametrize("dtype", ["float32", "int32", "uint32"])
-@pytest.mark.parametrize("target", ["ascendc", "pto"])
+@pytest.mark.parametrize(
+    "dtype",
+    ["float32", pytest.param("int32", marks=pytest.mark.low_priority), pytest.param("uint32", marks=pytest.mark.low_priority)],
+)
+@pytest.mark.parametrize("target", ["ascendc", pytest.param("pto", marks=pytest.mark.low_priority)])
 @pytest.mark.parametrize(
     "shape",
     [
-        (16, 16),
+        pytest.param((16, 16), marks=pytest.mark.low_priority),
         (32, 32),
-        (32, 16),
-        (16, 32),
-        (48, 48),
-        (64, 64),
-        (64, 32),
-        (32, 64),
+        pytest.param((32, 16), marks=pytest.mark.low_priority),
+        pytest.param((16, 32), marks=pytest.mark.low_priority),
+        pytest.param((48, 48), marks=pytest.mark.low_priority),
+        pytest.param((64, 64), marks=pytest.mark.low_priority),
+        pytest.param((64, 32), marks=pytest.mark.low_priority),
+        pytest.param((32, 64), marks=pytest.mark.low_priority),
     ],
 )
 def test_transpose_block_b32(dtype, target, shape):
@@ -175,9 +181,19 @@ def test_transpose_block_b32(dtype, target, shape):
 # -----------------------------------------------------------------------------
 # B32 scalar-fallback path: H/W multiples of 8 but not 16 (e.g. 8, 24)
 # -----------------------------------------------------------------------------
-@pytest.mark.parametrize("dtype", ["float32", "int32", "uint32"])
-@pytest.mark.parametrize("target", ["ascendc", "pto"])
-@pytest.mark.parametrize("shape", [(16, 8), (8, 16), (24, 24)])
+@pytest.mark.parametrize(
+    "dtype",
+    ["float32", pytest.param("int32", marks=pytest.mark.low_priority), pytest.param("uint32", marks=pytest.mark.low_priority)],
+)
+@pytest.mark.parametrize("target", ["ascendc", pytest.param("pto", marks=pytest.mark.low_priority)])
+@pytest.mark.parametrize(
+    "shape",
+    [
+        (16, 8),
+        pytest.param((8, 16), marks=pytest.mark.low_priority),
+        pytest.param((24, 24), marks=pytest.mark.low_priority),
+    ],
+)
 def test_transpose_b32_scalar_fallback(dtype, target, shape):
     M, N = shape
     run_test_transpose(M, N, dtype, target)
@@ -187,8 +203,15 @@ def test_transpose_b32_scalar_fallback(dtype, target, shape):
 # Scalar fallback path: int8 (32-byte aligned => H/W multiples of 32)
 # -----------------------------------------------------------------------------
 @pytest.mark.parametrize("dtype", ["int8"])
-@pytest.mark.parametrize("target", ["ascendc", "pto"])
-@pytest.mark.parametrize("shape", [(32, 32), (64, 64), (32, 64)])
+@pytest.mark.parametrize("target", ["ascendc", pytest.param("pto", marks=pytest.mark.low_priority)])
+@pytest.mark.parametrize(
+    "shape",
+    [
+        (32, 32),
+        pytest.param((64, 64), marks=pytest.mark.low_priority),
+        pytest.param((32, 64), marks=pytest.mark.low_priority),
+    ],
+)
 def test_transpose_fallback_int8(dtype, target, shape):
     M, N = shape
     run_test_transpose(M, N, dtype, target)
@@ -198,8 +221,15 @@ def test_transpose_fallback_int8(dtype, target, shape):
 # Scalar fallback path: bfloat16 (32-byte aligned => H/W multiples of 16)
 # -----------------------------------------------------------------------------
 @pytest.mark.parametrize("dtype", ["bfloat16"])
-@pytest.mark.parametrize("target", ["ascendc", "pto"])
-@pytest.mark.parametrize("shape", [(16, 16), (32, 32), (16, 32)])
+@pytest.mark.parametrize("target", ["ascendc", pytest.param("pto", marks=pytest.mark.low_priority)])
+@pytest.mark.parametrize(
+    "shape",
+    [
+        (16, 16),
+        pytest.param((32, 32), marks=pytest.mark.low_priority),
+        pytest.param((16, 32), marks=pytest.mark.low_priority),
+    ],
+)
 def test_transpose_fallback_bfloat16(dtype, target, shape):
     M, N = shape
     run_test_transpose(M, N, dtype, target)
@@ -223,15 +253,14 @@ def test_transpose_fallback_int64(dtype, target, shape):
 @pytest.mark.parametrize(
     "shape,dtype",
     [
-        ((20, 36), "float16"),
-        ((17, 33), "float16"),
-        ((24, 40), "float16"),
-        ((16, 33), "float16"),
-        ((33, 16), "float16"),
-        ((16, 16), "int8"),
-        ((17, 17), "float32"),
+        pytest.param((20, 36), "float16", id="20x36-f16", marks=pytest.mark.low_priority),
+        pytest.param((17, 33), "float16", id="17x33-f16", marks=pytest.mark.low_priority),
+        pytest.param((24, 40), "float16", id="24x40-f16", marks=pytest.mark.low_priority),
+        pytest.param((16, 33), "float16", id="16x33-f16", marks=pytest.mark.low_priority),
+        pytest.param((33, 16), "float16", id="33x16-f16", marks=pytest.mark.low_priority),
+        pytest.param((16, 16), "int8", id="16x16-i8", marks=pytest.mark.low_priority),
+        pytest.param((17, 17), "float32", id="17x17-f32"),
     ],
-    ids=["20x36-f16", "17x33-f16", "24x40-f16", "16x33-f16", "33x16-f16", "16x16-i8", "17x17-f32"],
 )
 def test_transpose_non_aligned_raises(shape, dtype):
     M, N = shape
