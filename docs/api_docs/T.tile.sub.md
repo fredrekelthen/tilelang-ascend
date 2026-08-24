@@ -43,17 +43,17 @@ def sub(
 
 - 支持 1D 和 2D
 - 支持整行切片（如 `buf[2, :]`）及覆盖完整最后一维的连续多行区域（如 `buf[0:2, :]`）
-- 更高维 buffer 需通过切片降维为 1D/2D 的 BufferRegion 传入
+- 更高维 buffer 需通过切片降维为 1D/2D 的切片传入
 
 ### 2.4 约束条件
 
 1. dst 与 src0 的大小必须一致（Python 断言，报错信息 "size must be same"）
-2. src1 为 BufferRegion 时，其大小必须与 dst 一致（Python 断言）
+2. src1 为切片（BufferRegion）时，其大小必须与 dst 一致（Python 断言）
 3. src1 为 Buffer 时大小不做校验：小于 dst 时产生越界读取，大于 dst 时仅前 dst 大小个元素参与运算（不报错）
 4. dst、src0、src1（tensor 形式）的 dtype 必须一致；dtype 不一致会在编译期报错
 5. 操作数地址需 32 字节对齐（硬件约束）
 6. 仅支持整行/整 buffer 的连续区域；2D 列偏移切片（如 `buf[0, 8:40]`）会产生错误结果或触发 aicore 异常（507015），不支持
-7. src1 为 BufferLoad 时仅支持 1D 单索引（如 `buf[i]`）；多维 BufferLoad 只取第一个索引，结果错误（当前未校验）
+7. src1 为 buffer 元素访问时仅支持 1D 单索引（如 `buf[i]`）；多维元素访问只取第一个索引，结果错误（实测行为，两后端一致）
 8. src1 为 BufferLoad 且 dtype 为 int16/int32 时，仅 pto 后端支持（ascendc codegen 生成 float 标量与 int 张量混用导致编译失败）
 9. 标量仅支持作为 src1（右操作数）：减法不可交换，`标量 - Buffer` 形式（如 `2.0 - buf`）当前无法表达；Ascend C `Subs` 接口原生支持（flexible scalar），TileLang 前端暂未暴露该形式（缺口记录）
 
