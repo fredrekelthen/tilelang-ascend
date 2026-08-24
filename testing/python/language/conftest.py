@@ -7,8 +7,9 @@ They are NOT autouse: test suites opt in via ``usefixtures`` so that
 pre-existing tests (e.g. select/elementwise) keep their own seed/cache
 behavior untouched.
 
-Markers (l0/l1/l2/compile_time + project low_priority/ci_skip) are
-registered in pyproject.toml [tool.pytest.ini_options].
+Tests use the project-standard markers only (low_priority / ci_skip,
+see docs/pytest_marker_guide.md); Gate/functional cases run by default,
+boundary cases are marked low_priority.
 """
 
 import pytest
