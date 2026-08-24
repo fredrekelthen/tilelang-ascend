@@ -368,23 +368,20 @@ class BinaryOpSpec:
     def scalar_golden(self, a, scalar, dtype):
         if dtype in ("int16", "int32"):
             scalar = int(scalar)
-        return self.golden(a, scalar)
+        return self.golden(a, torch.full_like(a, scalar))
 
 
-@pytest.mark.compile_time
 @pytest.mark.usefixtures("disable_tilelang_cache", "random_seed")
 class _BinaryOpCompile:
     op = None
     _dtype_source = "supported_dtypes"
 
-    @pytest.mark.l0
     def test_compiles(self, dtype):
         skip_if_missing(self.op, "kernel_tensor")
         func = self.op.kernel_tensor(128, 128, 64, 64, dtype)
         compiled = tilelang.compile(func, out_idx=[-1], pass_configs=DEFAULT_PASS_CONFIGS, target="ascendc")
         assert callable(compiled)
 
-    @pytest.mark.l0
     @pytest.mark.parametrize("target", ["ascendc", "pto"])
     def test_compiles_both_targets(self, target):
         skip_if_missing(self.op, "kernel_tensor")
@@ -392,14 +389,12 @@ class _BinaryOpCompile:
         compiled = tilelang.compile(func, out_idx=[-1], pass_configs=DEFAULT_PASS_CONFIGS, target=target)
         assert callable(compiled)
 
-    @pytest.mark.l0
     def test_scalar_variant_compiles(self):
         skip_if_missing(self.op, "kernel_scalar")
         func = self.op.kernel_scalar(128, 128, 64, 64, 1.0, self.op.supported_dtypes[0])
         compiled = tilelang.compile(func, out_idx=[-1], pass_configs=DEFAULT_PASS_CONFIGS, target="ascendc")
         assert callable(compiled)
 
-    @pytest.mark.l1
     @pytest.mark.parametrize("shape", [(64, 64), (128, 256), (256, 128)])
     def test_various_shapes_compile(self, shape):
         skip_if_missing(self.op, "kernel_tensor")
@@ -414,7 +409,6 @@ class _BinaryOpE2E:
     op = None
     _dtype_source = "supported_dtypes"
 
-    @pytest.mark.l0
     @pytest.mark.parametrize("target", ["ascendc", "pto"])
     def test_basic_1024x1024(self, dtype, target):
         skip_if_missing(self.op, "kernel_tensor")
@@ -429,7 +423,6 @@ class _BinaryOpE2E:
             golden_fn=self.op.golden,
         )
 
-    @pytest.mark.l1
     @pytest.mark.parametrize(
         "M,N,block_M,block_N",
         [
@@ -453,7 +446,6 @@ class _BinaryOpE2E:
             golden_fn=self.op.golden,
         )
 
-    @pytest.mark.l1
     @pytest.mark.parametrize("M,N", [(100, 200), (107, 145), (255, 513)])
     @pytest.mark.parametrize("target", ["ascendc", "pto"])
     def test_tail_blocks(self, M, N, dtype, target):
@@ -479,14 +471,12 @@ class _BinaryOpE2E:
             golden_fn=self.op.golden,
         )
 
-    @pytest.mark.l1
     @pytest.mark.parametrize("N", [256])
     @pytest.mark.parametrize("target", ["ascendc", "pto"])
     def test_1d(self, N, dtype, target):
         skip_if_missing(self.op, "kernel_1d")
         run_1d_op(self.op.kernel_1d, N, dtype, target, golden_fn=self.op.golden)
 
-    @pytest.mark.l1
     @pytest.mark.parametrize("scalar_val", [2.0])
     @pytest.mark.parametrize("target", ["ascendc", "pto"])
     def test_tensor_op_scalar(self, scalar_val, dtype, target):
@@ -504,19 +494,16 @@ class _BinaryOpE2E:
             golden_fn=self.op.scalar_golden,
         )
 
-    @pytest.mark.l1
     @pytest.mark.parametrize("target", ["ascendc", "pto"])
     def test_buffload(self, dtype, target):
         skip_if_missing(self.op, "kernel_buffload")
         run_buffload_op(self.op.kernel_buffload, 64, 128, 8, dtype, target, golden_fn=self.op.golden)
 
-    @pytest.mark.l1
     @pytest.mark.parametrize("target", ["ascendc", "pto"])
     def test_row_slice_2d(self, dtype, target):
         skip_if_missing(self.op, "kernel_row_slice")
         run_row_slice_op(self.op.kernel_row_slice, 4, 128, 4, dtype, target, golden_fn=self.op.golden)
 
-    @pytest.mark.l1
     @pytest.mark.parametrize("target", ["ascendc", "pto"])
     def test_inplace(self, dtype, target):
         skip_if_missing(self.op, "kernel_inplace")
@@ -534,7 +521,7 @@ class _BinaryOpBoundary:
     op = None
     _dtype_source = "boundary_dtypes"
 
-    @pytest.mark.l2
+    @pytest.mark.low_priority
     @pytest.mark.parametrize("target", ["ascendc", "pto"])
     def test_large_values(self, dtype, target):
         skip_if_missing(self.op, "kernel_tensor")
@@ -551,7 +538,7 @@ class _BinaryOpBoundary:
         c = compiled(a, b)
         assert c.shape == (256, 256)
 
-    @pytest.mark.l2
+    @pytest.mark.low_priority
     @pytest.mark.parametrize("target", ["ascendc", "pto"])
     def test_zeros(self, dtype, target):
         skip_if_missing(self.op, "kernel_tensor")
@@ -564,7 +551,7 @@ class _BinaryOpBoundary:
         c = compiled(a, b)
         assert_close_npu(c, torch.zeros_like(a), dtype)
 
-    @pytest.mark.l2
+    @pytest.mark.low_priority
     @pytest.mark.parametrize("target", ["ascendc", "pto"])
     def test_negative_values(self, dtype, target):
         skip_if_missing(self.op, "kernel_tensor")
@@ -577,7 +564,7 @@ class _BinaryOpBoundary:
         c = compiled(a, b)
         assert_close_npu(c, self.op.golden(a, b), dtype)
 
-    @pytest.mark.l2
+    @pytest.mark.low_priority
     @pytest.mark.parametrize("target", ["ascendc", "pto"])
     def test_inf_input(self, target):
         skip_if_missing(self.op, "kernel_tensor")
@@ -589,10 +576,9 @@ class _BinaryOpBoundary:
         compiled = tilelang.compile(func, out_idx=[-1], pass_configs=DEFAULT_PASS_CONFIGS, target=target)
         torch.npu.synchronize()
         c = compiled(a, b)
-        assert c.shape == (256, 256)
-        assert torch.all(torch.isinf(c))
+        assert_close_npu(c, self.op.golden(a, b), "float16")
 
-    @pytest.mark.l2
+    @pytest.mark.low_priority
     @pytest.mark.parametrize("target", ["ascendc", "pto"])
     def test_nan_input(self, target):
         skip_if_missing(self.op, "kernel_tensor")
@@ -607,7 +593,7 @@ class _BinaryOpBoundary:
         assert c.shape == (256, 256)
         assert torch.all(torch.isnan(c))
 
-    @pytest.mark.l2
+    @pytest.mark.low_priority
     @pytest.mark.parametrize("target", ["ascendc", "pto"])
     def test_minimum_shape(self, dtype, target):
         skip_if_missing(self.op, "kernel_tensor")
@@ -622,7 +608,7 @@ class _BinaryOpBoundary:
             golden_fn=self.op.golden,
         )
 
-    @pytest.mark.l2
+    @pytest.mark.low_priority
     @pytest.mark.parametrize("target", ["ascendc", "pto"])
     def test_multidim_buffload_takes_first_index(self, dtype, target):
         """Multi-dim element access (S[1,3]) only uses the first index —
@@ -630,21 +616,21 @@ class _BinaryOpBoundary:
         skip_if_missing(self.op, "kernel_multidim_buffload")
         run_multidim_buffload_op(self.op.kernel_multidim_buffload, 64, 128, dtype, target, golden_fn=self.op.golden)
 
-    @pytest.mark.l2
+    @pytest.mark.low_priority
     def test_size_mismatch_src0(self):
         """dst vs src0 size mismatch raises at trace time (constraint 1)."""
         skip_if_missing(self.op, "mismatch_kernels")
         with pytest.raises((RuntimeError, AssertionError)):
             self.op.mismatch_kernels[0]()
 
-    @pytest.mark.l2
+    @pytest.mark.low_priority
     def test_size_mismatch_region(self):
         """src1 BufferRegion size mismatch raises at trace time (constraint 2)."""
         skip_if_missing(self.op, "mismatch_kernels")
         with pytest.raises((RuntimeError, AssertionError)):
             self.op.mismatch_kernels[1]()
 
-    @pytest.mark.l2
+    @pytest.mark.low_priority
     @pytest.mark.parametrize("target", ["ascendc", "pto"])
     def test_buffer_size_unvalidated(self, target):
         """src1 Buffer size is NOT validated (constraint 3): only the first
