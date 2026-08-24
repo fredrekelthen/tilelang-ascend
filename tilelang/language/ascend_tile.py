@@ -494,9 +494,9 @@ def merge_sort(
           src0 → src1 → src2 → src3 order, preserving the order inside
           each source block.
         - Slice sources must be 32-byte aligned. Column-offset slices
-          of 2D buffers (e.g. ``buf[0, 8:136]``) generate a wrong
-          address and are not supported; use 1D slices or whole-row
-          slices (e.g. ``buf[0, :]``) instead.
+          of 2D buffers (e.g. ``buf[0, 8:136]``) are not supported;
+          use 1D slices or whole-row slices (e.g. ``buf[0, :]``)
+          instead.
     """
 
     def retrieve_shape(object: Buffer | BufferRegion) -> list[int]:
