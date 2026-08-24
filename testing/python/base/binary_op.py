@@ -116,6 +116,48 @@ def make_buffload_kernel(tile_op):
     return kernel
 
 
+def make_multidim_buffload_kernel(tile_op):
+    """Factory: multi-dimensional buffer-element scalar (S[1, 3]).
+
+    The front-end only uses the first index (flat index 1), which is what
+    constraint 7 documents — this kernel pins that behavior on hardware.
+    """
+
+    def kernel(M, N, dtype="float"):
+        @T.prim_func
+        def main(
+            A: T.Tensor((M, N), dtype),  # type: ignore
+            S: T.Tensor((2, 8), dtype),  # type: ignore
+            C: T.Tensor((M, N), dtype),  # type: ignore
+        ):
+            with T.Kernel(1, is_npu=True) as (cid, _):
+                a_ub = T.alloc_ub((M, N), dtype)
+                s_ub = T.alloc_ub((2, 8), dtype)
+                c_ub = T.alloc_ub((M, N), dtype)
+                T.copy(A, a_ub)
+                T.copy(S, s_ub)
+                tile_op(c_ub, a_ub, s_ub[1, 3])
+                T.copy(c_ub, C)
+
+        return main
+
+    return kernel
+
+
+def run_multidim_buffload_op(kernel_factory, M, N, dtype, target, golden_fn):
+    """Multi-dim element access: result must equal golden(a, S.flat[1]) —
+    only the first index participates (constraint 7)."""
+    func = kernel_factory(M, N, dtype=dtype)
+    compiled = tilelang.compile(func, out_idx=[-1], pass_configs=DEFAULT_PASS_CONFIGS, target=target)
+    torch.manual_seed(0)
+    a = make_test_data((M, N), dtype, device="cpu")
+    s = torch.randn(2, 8, dtype=DTYPE_MAP[dtype])
+    torch.npu.synchronize()
+    b = compiled(a.npu(), s.npu())
+    torch.npu.synchronize()
+    assert_close_npu(b.cpu(), golden_fn(a, s.view(-1)[1]), dtype)
+
+
 def make_row_slice_kernel(tile_op):
     """Factory: 2D whole-row slice regions with a per-row BufferLoad scalar."""
 
@@ -299,6 +341,7 @@ class BinaryOpSpec:
         kernel_1d=None,
         kernel_buffload=None,
         kernel_row_slice=None,
+        kernel_multidim_buffload=None,
         mismatch_kernels=None,
         low_priority_dtypes=None,
     ):
@@ -318,6 +361,7 @@ class BinaryOpSpec:
         self.kernel_1d = kernel_1d or None
         self.kernel_buffload = kernel_buffload or None
         self.kernel_row_slice = kernel_row_slice or None
+        self.kernel_multidim_buffload = kernel_multidim_buffload or None
         # Size-validation kernels (constraint 1/2/3 checks); None -> disabled.
         self.mismatch_kernels = mismatch_kernels or None
 
@@ -577,6 +621,14 @@ class _BinaryOpBoundary:
             target,
             golden_fn=self.op.golden,
         )
+
+    @pytest.mark.l2
+    @pytest.mark.parametrize("target", ["ascendc", "pto"])
+    def test_multidim_buffload_takes_first_index(self, dtype, target):
+        """Multi-dim element access (S[1,3]) only uses the first index —
+        result equals golden(a, S.flatten()[1]) (constraint 7)."""
+        skip_if_missing(self.op, "kernel_multidim_buffload")
+        run_multidim_buffload_op(self.op.kernel_multidim_buffload, 64, 128, dtype, target, golden_fn=self.op.golden)
 
     @pytest.mark.l2
     def test_size_mismatch_src0(self):

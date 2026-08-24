@@ -9,6 +9,7 @@ from base.binary_op import (
     make_1d_kernel,
     make_buffload_kernel,
     make_buffer_mismatch_kernel,
+    make_multidim_buffload_kernel,
     make_region_mismatch_kernel,
     make_row_slice_kernel,
     make_src0_mismatch_kernel,
@@ -25,6 +26,7 @@ min_spec = BinaryOpSpec(
     kernel_1d=make_1d_kernel(tile_op),
     kernel_buffload=make_buffload_kernel(tile_op),
     kernel_row_slice=make_row_slice_kernel(tile_op),
+    kernel_multidim_buffload=make_multidim_buffload_kernel(tile_op),
     mismatch_kernels=(
         lambda: make_src0_mismatch_kernel(tile_op),
         lambda: make_region_mismatch_kernel(tile_op),
