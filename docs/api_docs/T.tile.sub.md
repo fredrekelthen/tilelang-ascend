@@ -47,8 +47,8 @@ def sub(
 
 ### 2.4 约束条件
 
-1. dst 与 src0 的大小必须一致（Python 断言，报错信息 "size must be same"）
-2. src1 为切片（BufferRegion）时，其大小必须与 dst 一致（Python 断言）
+1. dst 与 src0 的大小必须一致
+2. src1 为切片（BufferRegion）时，其大小必须与 dst 一致
 3. src1 为 Buffer 时大小不做校验：小于 dst 时产生越界读取，大于 dst 时仅前 dst 大小个元素参与运算（不报错）
 4. dst、src0、src1（tensor 形式）的 dtype 必须一致；dtype 不一致会在编译期报错
 5. 操作数地址需 32 字节对齐（硬件约束）

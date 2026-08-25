@@ -22,7 +22,7 @@ def div(
 |--------|----------|------|------|----------|
 | dst | 输出 | 存放运算结果 | 张量（tensor） | 必填 |
 | src0 | 输入 | 第一个源操作数（被除数） | 张量（tensor） | 必填 |
-| src1 | 输入 | 第二个源操作数（除数），支持 tensor 或 scalar；除数为 0 时行为与 IEEE 754 不一致（实测：非零/0 得 ±inf，0/0 得 +inf 而非 NaN） | 张量（tensor）/ 标量（scalar） | 必填 |
+| src1 | 输入 | 第二个源操作数（除数），支持 tensor 或 scalar；除数为 0 时行为未定义 | 张量（tensor）/ 标量（scalar） | 必填 |
 
 > **类型说明**：
 > - **tensor**：通过 `T.alloc_ub`、`T.alloc_shared` 等分配的缓冲区（Buffer），或其切片（BufferRegion）
@@ -47,8 +47,8 @@ def div(
 
 ### 2.4 约束条件
 
-1. dst 与 src0 的大小必须一致（Python 断言，报错信息 "size must be same"）
-2. src1 为切片（BufferRegion）时，其大小必须与 dst 一致（Python 断言）
+1. dst 与 src0 的大小必须一致
+2. src1 为切片（BufferRegion）时，其大小必须与 dst 一致
 3. src1 为 Buffer 时大小不做校验：小于 dst 时产生越界读取，大于 dst 时仅前 dst 大小个元素参与运算（不报错）
 4. dst、src0、src1（tensor 形式）的 dtype 必须一致；dtype 不一致会在编译期报错
 5. 操作数地址需 32 字节对齐（硬件约束）
