@@ -4,8 +4,8 @@ Registered against the shared unary-op framework in testing/python/base/.
 Developer mode via DEFAULT_PASS_CONFIGS (auto sync + memory planning).
 
 Notes:
-- PTO backend does not support sin (compile-time error "tl.ascend_sin is
-  not supported by the PTO backend"), so all pto params are skipped.
+- PTO backend does not support sin (compile-time error), so all pto params
+  are skipped.
 - sin(inf) = nan (!= inf), so the inf-input special-value check is skipped.
 """
 

@@ -4,8 +4,6 @@
 
 对源操作数逐元素执行余弦运算：`dst[i] = cos(src[i])`
 
-> cos 为独立实现，直接映射到 `tl.ascend_cos` intrinsic（Ascend C 高阶 API `Cos`，多项式近似实现）。Ascend C 后端内部需要临时空间（tmpBuffer）存储中间变量；**PTO 后端不支持 cos**（编译期报 `tl.ascend_cos is not supported by the PTO backend`，无原生 PTO-ISA 指令）。
-
 ## 2. 函数原型
 
 ### 2.1 函数定义
@@ -25,7 +23,7 @@ def cos(
 |--------|----------|------|------|----------|
 | dst | 输出 | 存放余弦运算结果 | 张量（tensor） | 必填 |
 | src | 输入 | 源操作数 | 张量（tensor） | 必填 |
-| tmp | 输入 | 显式指定的 UB 临时缓冲区（一般无需用户提供，省略时框架自动申请） | 张量（tensor） | 可选 |
+| tmp | 输入 | 可选显式 UB 临时存储；未提供时由框架自动申请 | 张量（tensor） | 可选（默认 `None`） |
 
 > **类型说明**：
 > - **tensor**：通过 `T.alloc_ub`、`T.alloc_shared` 等分配的缓冲区（Buffer），或其切片（BufferRegion）
@@ -36,26 +34,27 @@ def cos(
 
 | 平台 | dst | src |
 |------|:---:|:---:|
-| Ascend A2 / A3（Ascend C 后端） | float16, float32 | float16, float32 |
+| Ascend A2 / A3 | float16, float32 | float16, float32 |
 
-- 整数 dtype（int16/int32）与 bfloat16 编译失败（`src/transform/allocate_tmp_buffer.cc` 校验 `dtype.is_float() && bits ∈ {16, 32}`）
-- PTO 后端：不支持（编译期报错）
+- 不支持整数（int16/int32 等）与 bfloat16
+- PTO 后端不支持该接口
 
 #### 2.3.2 Shape 支持
 
 - 支持 1D 和 2D
 - 支持整行切片（如 `buf[0:32, :]`）；仅计算切片区域内元素，区域外内容未定义
+- 不支持 2D 列偏移切片（如 `buf[:, 8:40]`）
 
 ### 2.4 约束条件
 
-1. dst 与 src 的元素总数必须相同，否则前端 assert 失败（"size must be same"）
-2. dst 与 src 的 dtype 必须一致（Ascend C 约束）
+1. dst 与 src 的元素总数必须相同（Python 断言，报错信息 "size must be same"）
+2. dst 与 src 的 dtype 必须一致
 3. 操作数地址需 32 字节对齐（硬件约束）
-4. **支持原地运算**（dst 与 src 为同一 buffer，Ascend C 后端真机实测正确）
-5. 特殊值遵循 IEEE 语义（真机实测）：`cos(0)=1`、`cos(±inf)=nan`、`cos(nan)=nan`
-6. 精度（真机实测，Ascend910B3）：float16 相对误差 ≤ 5e-4（多项式近似）、float32 绝对误差 ≤ 4e-9
-7. 输入超出 [-65504.0, 65504.0] 时（float32 大值输入），多项式近似不做范围归约，结果与 IEEE 参考值可能不一致
-8. 接口内部使用框架自动申请的临时缓冲区（fp16：`max(2S, 512)` 字节、fp32：`max(2S, 384)` 字节，S 为 src 字节数），无需用户手动分配；也可通过 `tmp` 参数显式提供
+4. dst 可与 src 为同一 buffer（原地运算）
+5. 特殊值遵循 IEEE 语义：`cos(0)=1`、`cos(±inf)=nan`、`cos(nan)=nan`
+6. 接口为近似实现：float16 相对误差 ≤ 5e-4、float32 绝对误差 ≤ 4e-9
+7. 输入绝对值超出 65504 时结果与 IEEE 参考值可能不一致
+8. 未提供 `tmp` 时，接口内部使用框架自动申请的临时缓冲区，无需用户手动分配；也可通过 `tmp` 参数显式提供
 
 ## 3. 示例代码
 

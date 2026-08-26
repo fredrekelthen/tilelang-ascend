@@ -4,8 +4,8 @@ Registered against the shared unary-op framework in testing/python/base/.
 Developer mode via DEFAULT_PASS_CONFIGS (auto sync + memory planning).
 
 Notes:
-- PTO backend does not support cos (compile-time error "tl.ascend_cos is
-  not supported by the PTO backend"), so all pto params are skipped.
+- PTO backend does not support cos (compile-time error), so all pto params
+  are skipped.
 - cos(inf) = nan (!= inf), so the inf-input special-value check is skipped.
 """
 

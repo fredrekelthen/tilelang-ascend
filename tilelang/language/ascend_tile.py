@@ -1981,9 +1981,8 @@ def sin(
 ):  # noqa: F821
     """Performs element-wise sine calculation: ``dst[i] = sin(src[i])``.
 
-    The operation maps to the ``tl.ascend_sin`` intrinsic (Ascend C
-    ``Sin``, polynomial approximation) and is only supported on the
-    Ascend C backend; the PTO backend rejects it at compile time.
+    Only supported on the Ascend C backend; the PTO backend rejects it at
+    compile time.
 
     Args:
         dst: The destination buffer; it may alias src (in-place) on ascendc.
@@ -1997,8 +1996,8 @@ def sin(
         - Supported dtypes: float16, float32 only (Atlas A2/A3); integer
           and bfloat16 dtypes fail at compile time.
         - Operand addresses must be 32-byte aligned (hardware constraint).
-        - ``tmp`` is optional; a temporary buffer of max(2S, 512/384) bytes
-          (S = src bytes; fp16/fp32) is auto-allocated when not provided.
+        - ``tmp`` is optional; a temporary buffer is auto-allocated when not
+          provided.
         - Special values follow IEEE semantics: sin(0)=0, sin(±inf)=nan,
           sin(nan)=nan. Inputs beyond the float16 range ([-65504, 65504])
           give approximation results without range reduction and are not
@@ -2031,9 +2030,8 @@ def cos(
 ):  # noqa: F821
     """Performs element-wise cosine calculation: ``dst[i] = cos(src[i])``.
 
-    The operation maps to the ``tl.ascend_cos`` intrinsic (Ascend C
-    ``Cos``, polynomial approximation) and is only supported on the
-    Ascend C backend; the PTO backend rejects it at compile time.
+    Only supported on the Ascend C backend; the PTO backend rejects it at
+    compile time.
 
     Args:
         dst: The destination buffer; it may alias src (in-place) on ascendc.
@@ -2047,8 +2045,8 @@ def cos(
         - Supported dtypes: float16, float32 only (Atlas A2/A3); integer
           and bfloat16 dtypes fail at compile time.
         - Operand addresses must be 32-byte aligned (hardware constraint).
-        - ``tmp`` is optional; a temporary buffer of max(2S, 512/384) bytes
-          (S = src bytes; fp16/fp32) is auto-allocated when not provided.
+        - ``tmp`` is optional; a temporary buffer is auto-allocated when not
+          provided.
         - Special values follow IEEE semantics: cos(0)=1, cos(±inf)=nan,
           cos(nan)=nan. Inputs beyond the float16 range ([-65504, 65504])
           give approximation results without range reduction and are not
