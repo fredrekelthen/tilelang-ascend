@@ -6,6 +6,8 @@
 
 以 `src0` 为底、`src1` 为指数的逐元素求幂计算。本 API 仅支持 tensor-tensor 形式，不支持 scalar 指数。
 
+> **已知缺口**：Ascend C 原生 `Power` 接口支持 src0/src1 传入标量（扩展为逐元素广播），当前 `T.tile.pow` 尚未暴露该能力（`src1` 仅接受 Buffer/BufferRegion，传标量会在前端报错）。固定标量指数的场景可先用 `T.tile.fill` 构造常量 buffer（见示例 2）。
+
 ## 2. 函数原型
 
 ### 2.1 函数定义
@@ -52,8 +54,8 @@ def pow(
 
 #### 2.3.3 tmp 临时缓冲区（Ascend C）
 
-- 省略 `tmp` 时由编译器自动分配 workspace：float16 为 `max(2*S, 1152)` 字节，float32/int32 为 `max(2*S, 768)` 字节（S 为源 tensor 字节数，来自框架的保守启发式）
-- 显式 `tmp` 需为一维、静态、连续的 `shared.ub` Buffer（起始字节地址 32B 对齐），容量由调用者保证
+- 省略 `tmp` 时由编译器自动分配：float16 为 `max(2*S, 1152)` 字节，float32/int32 为 `max(2*S, 768)` 字节（S 为源 tensor 字节数，来自框架的保守启发式）
+- 显式 `tmp` 需为一维、静态、连续的 UB（起始字节地址 32B 对齐），容量由调用者保证
 
 ### 2.4 约束条件
 
