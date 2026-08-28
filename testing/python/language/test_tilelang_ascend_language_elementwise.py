@@ -5412,6 +5412,31 @@ def test_tile_round_inplace(dtype, target):
     torch.testing.assert_close(output, torch.round(input_host).npu(), rtol=0, atol=0)
 
 
+def test_tile_round_pto_float16_is_rejected_at_compile_time():
+    # A same-dtype float16 TCVT has no verified lowering on the PTO backend
+    # (issues #1637/#1649): it used to compile and silently produce garbage.
+    with pytest.raises(tilelang.tvm.error.InternalError, match="PTO round only supports float32"):
+        tilelang.compile(
+            tile_round_kernel((64,), "float16", None),
+            out_idx=[-1],
+            pass_configs=pass_configs,
+            target="pto",
+        )
+
+
+@pytest.mark.parametrize("count", [17, 32])
+def test_tile_round_partial_count_pto_is_rejected_at_compile_time(count):
+    # PTO lowers round through a single full-tile TCVT with no scalar count
+    # operand; a partial count used to be silently dropped (issue #1650).
+    with pytest.raises(tilelang.tvm.error.InternalError, match="count == destination tile extent"):
+        tilelang.compile(
+            tile_round_kernel((64,), "float", count),
+            out_idx=[-1],
+            pass_configs=pass_configs,
+            target="pto",
+        )
+
+
 def tile_round_slice_kernel(dtype):
     @T.prim_func
     def main(
