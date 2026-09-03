@@ -474,7 +474,7 @@ jobs:
 
   test:
     name: Benchmark Tests (Ascend NPU)
-    runs-on: [self-hosted, Linux, X64, ascend_910b]
+    runs-on: [self-hosted, Linux, tilelang-ascend-ci]
     needs: check_changes
     outputs:
       pass_rate: ${{ steps.check_results.outputs.pass_rate }}
