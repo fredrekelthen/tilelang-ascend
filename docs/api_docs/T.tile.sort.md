@@ -64,13 +64,17 @@ dst 以交错的（值, 索引）对存储，值和索引均使用 dst 的 dtype
 ### 2.4 约束
 
 1. dst 和 src 的 dtype 必须相同
-2. `aligned_count = ((actual_num + 31) // 32) × 32`；dst 必须至少有 `2 × aligned_count` 个元素（用于存储值-索引交错对）
+2. `aligned_count = ((actual_num + 31) // 32) × 32`；dst 必须至少有 `2 × aligned_count` 个元素（用于存储值-索引交错对）。dst/src 容量不足时无编译期校验，可能产生静默越界写入，调用方需自行确保容量
 3. src 必须至少有 `aligned_count` 个元素
-4. actual_num 必须满足 `1 ≤ actual_num ≤ min(src buffer 大小, 8160)`
+4. actual_num 必须满足 `1 ≤ actual_num ≤ min(src buffer 大小, 8160)`。`actual_num < 1` 会在编译期抛出 `ValueError`（前端校验）；当 actual_num 超出 src 容量时，行为未定义，可能触发 aicore 异常
 5. `repeatTimes = (actual_num + 31) // 32`，repeatTimes ∈ [1, 255]，即 actual_num 上限为 255 × 32 = 8160（硬件约束）
 6. 大 actual_num 受 UB 容量限制：dst 需要 `2 × aligned_count` 个元素，src 需要 `aligned_count` 个元素，内部临时 buffer 量级相当，三者之和不能超过 UB 容量（实际可用的 actual_num 远小于 8160）
-7. src 是否被原地修改取决于 dtype：float32 时，`actual_num` 到 `aligned_count` 之间的位置会被填充 -inf，src 被修改；float16 时，src 不会被修改（内部转换为 float32 后在临时 buffer 中操作）。如需保留原始数据，请先拷贝 src
-8. src 和 dst 地址不能重叠（dst 被写入，内部 merge 过程在 dst 和 tmp 之间 ping-pong；float32 时 src 会被读取/修改）
+7. src 尾部填充行为取决于 dtype：
+   - float32：`actual_num` 到 `aligned_count` 之间的位置会在 src 中原地被填充 -inf
+   - float16：内部转换为 float32 后在临时 buffer 中操作，src 不会被修改
+   - **注意**：实际填充范围因后端实现存在差异。Ascend C 后端填充整个 `[actual_num, aligned_count)` 区域；PTO 后端可能仅填充 32 字节对齐部分，未覆盖的尾部元素（如 actual_num=131 时前 5 个元素）在 src 未初始化时可能保留旧值并参与排序。建议调用方在调用前对 `src[actual_num:]` 区域预填充 -inf，以保证两后端行为一致
+8. 如需保留原始数据，请先拷贝 src
+9. src 和 dst 地址不能重叠（dst 被写入，内部 merge 过程在 dst 和 tmp 之间 ping-pong；float32 时 src 会被读取/修改）
 9. 排序方向固定为降序
 10. 所有 buffer 地址必须 32 字节对齐（硬件约束）
 

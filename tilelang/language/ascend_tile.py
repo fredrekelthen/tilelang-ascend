@@ -448,6 +448,11 @@ def sort(
           exactness beyond ~2048 elements.
     """
     repeatTimes = (actual_num + 31) // 32  # ceiling to 32-aligned
+    if isinstance(actual_num, tir.IntImm) and actual_num.value <= 0:
+        raise ValueError(
+            f"sort requires actual_num >= 1, got {actual_num.value}. "
+            "actual_num=0 triggers a hardware aicore exception."
+        )
     return _call_intrin_with_optional_tmp(
         "sort",
         [
