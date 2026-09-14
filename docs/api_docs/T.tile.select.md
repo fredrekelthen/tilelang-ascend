@@ -1,12 +1,12 @@
 # T.tile.select
 
-## 1. Description
+## 1. 功能说明
 
-Selects elements from `src0` or `src1` based on `selMask` bit values and writes the result to `dst`: `dst[i] = selMask.bit[i] ? src0[i] : src1[i]`
+根据 `selMask` 的比特位从 `src0` 或 `src1` 中选择元素，结果写入 `dst`：`dst[i] = selMask.bit[i] ? src0[i] : src1[i]`
 
-## 2. Function Prototype
+## 2. 函数原型
 
-### 2.1 Function Definition
+### 2.1 函数定义
 
 ```python
 def select(
@@ -20,75 +20,75 @@ def select(
 )
 ```
 
-### 2.2 Parameters
+### 2.2 参数说明
 
-| Parameter | Input/Output | Description | Type | Required/Optional |
-|-----------|-------------|-------------|------|-------------------|
-| dst | Output | Stores the selection result | tensor | Required |
-| selMask | Input | Selection mask; each bit controls the source of one element (bit=1 selects from src0, bit=0 selects from src1) | tensor (bit-packed, dtype uint8) | Required |
-| src0 | Input | Source selected when bit=1 | tensor | Required |
-| src1 | Input | Source selected when bit=0; supports tensor, BufferLoad, or scalar | tensor / scalar | Required |
-| selMode | Input | Selection mode; determines how selMask is interpreted and the type of src1 | string, see [2.3.3 selMode](#233-selmode) | Required |
-| tmp | Input | Optional complete UB scratch storage; its scalar dtype is reinterpreted by lowering and has no semantic meaning | tensor / None | Optional (default `None`) |
+| 参数名 | 输入/输出 | 描述 | 类型 | 必填/可选 |
+|--------|----------|------|------|----------|
+| dst | 输出 | 存放选择结果 | 张量（tensor） | 必填 |
+| selMask | 输入 | 选择掩码；每个比特控制一个元素的数据来源（bit=1 选 src0，bit=0 选 src1） | 张量（bit-packed，dtype uint8） | 必填 |
+| src0 | 输入 | bit=1 时选择的源 | 张量（tensor） | 必填 |
+| src1 | 输入 | bit=0 时选择的源；支持张量、BufferLoad 或标量 | 张量（tensor）/ 标量（scalar） | 必填 |
+| selMode | 输入 | 选择模式，决定 selMask 的解释方式及 src1 的类型 | 字符串，见 [2.3.3 selMode](#233-selmode) | 必填 |
+| tmp | 输入 | 可选 UB 临时存储空间；其标量 dtype 由 lowering 重解释，无语义含义 | 张量（tensor）/ None | 可选（默认 `None`） |
 
-> **Type Notes**:
-> - **tensor**: A buffer (Buffer) allocated via `T.alloc_ub`, `T.alloc_shared`, etc., or its slice (BufferRegion)
-> - **scalar**: A Python scalar or expression (PrimExpr), e.g. `1.0`, `0.0`
+> **类型说明**：
+> - **tensor**：通过 `T.alloc_ub`、`T.alloc_shared` 等分配的缓冲区（Buffer），或其切片（BufferRegion）
+> - **scalar**：Python 标量或表达式（PrimExpr），如 `1.0`、`0.0`
 
-### 2.3 Specifications
+### 2.3 参数规格
 
-#### 2.3.1 DataType Support
+#### 2.3.1 数据类型支持
 
-| Platform | dst | src0 | src1 | selMask |
-|----------|:---:|:----:|:----:|:-------:|
+| 平台 | dst | src0 | src1 | selMask |
+|------|:---:|:----:|:----:|:-------:|
 | Ascend A2 / A3 | float16, float32 | float16, float32 | float16, float32 | uint8 |
 
-- When src1 is a scalar, its dtype must match src0
-- All three selMode values support the same set of dtypes
+- src1 为标量时，其 dtype 必须与 src0 一致
+- 三种 selMode 均支持相同的数据类型
 
-#### 2.3.2 Shape Support
+#### 2.3.2 Shape 支持
 
-- Supports 1D and 2D
-- Higher-dimensional buffers must be passed as 1D/2D BufferRegion via slicing
+- 支持 1D 和 2D
+- 高维缓冲区需通过切片转为 1D/2D BufferRegion 传入
 
 #### 2.3.3 selMode
 
-selMode determines how selMask is interpreted. There are 3 modes:
+selMode 决定 selMask 的解释方式，共 3 种模式：
 
-| selMode | Description | Use Case |
-|---------|-------------|----------|
-| `"VSEL_CMPMASK_SPR"` | bit-packed mask, reused across iterations | Used with `T.tile.compare` results; mask comes from comparison output |
-| `"VSEL_TENSOR_SCALAR_MODE"` | mask stored contiguously, consumed across iterations; src1 is a scalar | src0 is a tensor, src1 is a constant value |
-| `"VSEL_TENSOR_TENSOR_MODE"` | mask stored contiguously, consumed across iterations; src1 is a tensor | Both src0 and src1 are tensors |
+| selMode | 说明 | 适用场景 |
+|---------|------|---------|
+| `"VSEL_CMPMASK_SPR"` | bit-packed 掩码，可跨迭代复用 | 与 `T.tile.compare` 配合使用；掩码来自比较输出 |
+| `"VSEL_TENSOR_SCALAR_MODE"` | 掩码连续存储，逐迭代消耗；src1 为标量 | src0 为张量，src1 为常量 |
+| `"VSEL_TENSOR_TENSOR_MODE"` | 掩码连续存储，逐迭代消耗；src1 为张量 | src0 和 src1 均为张量 |
 
-**src1 type and selMode correspondence**:
-- src1 is `PrimExpr` / `float` (scalar) → must use `"VSEL_TENSOR_SCALAR_MODE"`
-- src1 is `Buffer` / `BufferRegion` (tensor) → must use `"VSEL_CMPMASK_SPR"` or `"VSEL_TENSOR_TENSOR_MODE"`
-- src1 is `BufferLoad` (single element access) → must use `"VSEL_CMPMASK_SPR"` or `"VSEL_TENSOR_TENSOR_MODE"`
+**src1 类型与 selMode 对应关系**：
+- src1 为 `PrimExpr` / `float`（标量）→ 必须使用 `"VSEL_TENSOR_SCALAR_MODE"`
+- src1 为 `Buffer` / `BufferRegion`（张量）→ 必须使用 `"VSEL_CMPMASK_SPR"` 或 `"VSEL_TENSOR_TENSOR_MODE"`
+- src1 为 `BufferLoad`（单元素访问）→ 必须使用 `"VSEL_CMPMASK_SPR"` 或 `"VSEL_TENSOR_TENSOR_MODE"`
 
-### 2.4 Constraints
+### 2.4 约束条件
 
-1. dst and src0 must have the same shape
-2. When src1 is a tensor, its shape must match src0
-3. selMask is a bit-packed mask; dtype must be uint8, element count = data element count / 8
-4. Operand addresses must be 32-byte aligned (hardware constraint)
-5. src1 supports tensor (Buffer/BufferRegion), BufferLoad (single element access), or scalar (PrimExpr/float)
-6. `"VSEL_CMPMASK_SPR"` mode reuses the compare mask register; the maximum element count per call is `256 / sizeof(T)` (128 for float16, 64 for float32). Exceeding this causes precision errors (hardware constraint)
-7. `"VSEL_TENSOR_SCALAR_MODE"` and `"VSEL_TENSOR_TENSOR_MODE"` modes require reserving the last 8KB of Unified Buffer as temporary space (hardware constraint)
+1. dst 与 src0 的 shape 必须相同
+2. src1 为张量时，其 shape 必须与 src0 一致
+3. selMask 为 bit-packed 掩码，dtype 必须为 uint8，元素个数 = 数据元素个数 / 8
+4. 操作数地址需 32 字节对齐（硬件约束）
+5. src1 支持张量（Buffer/BufferRegion）、BufferLoad（单元素访问）或标量（PrimExpr/float）
+6. `"VSEL_CMPMASK_SPR"` 模式复用比较掩码寄存器，每次调用最多处理 `256 / sizeof(T)` 个元素（float16 为 128，float32 为 64）。超出该上限会导致精度错误（硬件约束）
+7. `"VSEL_TENSOR_SCALAR_MODE"` 和 `"VSEL_TENSOR_TENSOR_MODE"` 模式需预留 UB 最后 8KB 作为临时空间（硬件约束）
 
-## 3. Examples
+## 3. 示例代码
 
-**Example 1: tensor-tensor mode (selMode = "VSEL_TENSOR_TENSOR_MODE")**
+**示例 1：张量-张量模式（selMode = "VSEL_TENSOR_TENSOR_MODE"）**
 
 ```python
 src0 = T.alloc_ub((256,), "float16")
 src1 = T.alloc_ub((256,), "float16")
-mask = T.alloc_ub((32,),  "uint8")   # 256 elements / 8 bits/byte = 32 bytes
+mask = T.alloc_ub((32,),  "uint8")   # 256 元素 / 8 比特/字节 = 32 字节
 dst  = T.alloc_ub((256,), "float16")
 T.tile.select(dst, mask, src0, src1, "VSEL_TENSOR_TENSOR_MODE")
 ```
 
-**Example 2: tensor-scalar mode (selMode = "VSEL_TENSOR_SCALAR_MODE")**
+**示例 2：张量-标量模式（selMode = "VSEL_TENSOR_SCALAR_MODE"）**
 
 ```python
 src0 = T.alloc_ub((256,), "float16")
@@ -97,14 +97,14 @@ dst  = T.alloc_ub((256,), "float16")
 T.tile.select(dst, mask, src0, 0.0, "VSEL_TENSOR_SCALAR_MODE")  # src1 = 0.0
 ```
 
-**Example 3: Used with T.tile.compare (selMode = "VSEL_CMPMASK_SPR")**
+**示例 3：与 T.tile.compare 配合（selMode = "VSEL_CMPMASK_SPR"）**
 
 ```python
 src0 = T.alloc_ub((256,), "float16")
 src1 = T.alloc_ub((256,), "float16")
-cmp_mask = T.alloc_ub((32,), "uint8")  # bit-packed result from T.tile.compare
+cmp_mask = T.alloc_ub((32,), "uint8")  # 来自 T.tile.compare 的 bit-packed 结果
 dst = T.alloc_ub((256,), "float16")
 
-T.tile.compare(cmp_mask, src0, src1, "GT")                       # bit=1 where src0 > src1
-T.tile.select(dst, cmp_mask, src0, src1, "VSEL_CMPMASK_SPR")     # select the larger value -> equivalent to max(src0, src1)
+T.tile.compare(cmp_mask, src0, src1, "GT")                       # bit=1 表示 src0 > src1
+T.tile.select(dst, cmp_mask, src0, src1, "VSEL_CMPMASK_SPR")     # 选择较大值 = max(src0, src1)
 ```

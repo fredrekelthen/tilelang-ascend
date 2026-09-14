@@ -340,12 +340,25 @@ BLOCK_M = {"float16": 128, "float32": 32}
 BLOCK_N = {"float16": 256, "float32": 256}
 
 
-@pytest.mark.parametrize("dtype", ["float16", "float32"])
+@pytest.mark.parametrize(
+    "dtype",
+    [
+        "float32",
+        pytest.param("float16", marks=pytest.mark.low_priority),
+    ],
+)
 @pytest.mark.parametrize(
     "target",
     ["ascendc", pytest.param("pto", marks=pytest.mark.low_priority)],
 )
-@pytest.mark.parametrize("shape", [(1024, 1024), (512, 256), (256,)])
+@pytest.mark.parametrize(
+    "shape",
+    [
+        (1024, 1024),
+        pytest.param((512, 256), marks=pytest.mark.low_priority),
+        pytest.param((256,), marks=pytest.mark.low_priority),
+    ],
+)
 def test_select_tensor_op(dtype, target, shape):
     if len(shape) == 1:
         N = shape[0]
@@ -359,12 +372,25 @@ def test_select_tensor_op(dtype, target, shape):
         run_test_mod2(M, N, BLOCK_M[dtype], BLOCK_N[dtype], dtype, target)
 
 
-@pytest.mark.parametrize("dtype", ["float16", "float32"])
+@pytest.mark.parametrize(
+    "dtype",
+    [
+        "float32",
+        pytest.param("float16", marks=pytest.mark.low_priority),
+    ],
+)
 @pytest.mark.parametrize(
     "target",
     ["ascendc", pytest.param("pto", marks=pytest.mark.low_priority)],
 )
-@pytest.mark.parametrize("shape", [(1024, 1024), (512, 256), (256,)])
+@pytest.mark.parametrize(
+    "shape",
+    [
+        (1024, 1024),
+        pytest.param((512, 256), marks=pytest.mark.low_priority),
+        pytest.param((256,), marks=pytest.mark.low_priority),
+    ],
+)
 def test_select_scalar_op(dtype, target, shape):
     if len(shape) == 1:
         N = shape[0]
