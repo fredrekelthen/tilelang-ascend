@@ -598,6 +598,18 @@ def topk(
             )
 
     repeatTimes = (max_actual_num + 31) // 32
+    if isinstance(K, tir.IntImm) and K.value < 1:
+        raise ValueError(f"topk requires K >= 1, got {K.value}.")
+    if isinstance(actual_num, tir.IntImm):
+        if actual_num.value < 1:
+            raise ValueError(
+                f"topk requires actual_num >= 1, got {actual_num.value}. "
+                "actual_num=0 triggers a hardware aicore exception."
+            )
+        if isinstance(K, tir.IntImm) and K.value > actual_num.value:
+            raise ValueError(
+                f"topk requires K <= actual_num, got K={K.value}, actual_num={actual_num.value}."
+            )
     return _call_intrin_with_optional_tmp(
         "topk",
         [

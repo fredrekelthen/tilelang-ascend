@@ -75,10 +75,10 @@ dst 以交错的（值, 索引）对存储，值和索引均使用 dst 的 dtype
 ### 2.4 约束
 
 1. dst 和 src 的 dtype 必须相同
-2. `elems_per_block = 32 / sizeof(T)`；dst 必须至少有 `aligned_topk = ((2*K + elems_per_block - 1) / elems_per_block) * elems_per_block` 个元素。有效结果占据前 `2*K` 个元素；`2*K` 之后的元素（至 `aligned_topk`）内容未定义
+2. `elems_per_block = 32 / sizeof(T)`；dst 必须至少有 `aligned_topk = ((2*K + elems_per_block - 1) / elems_per_block) * elems_per_block` 个元素。有效结果占据前 `2*K` 个元素；`2*K` 之后的元素（至 `aligned_topk`）内容未定义。**dst/src 容量不足时无编译期校验，可能产生静默越界写入，调用方需自行确保容量**
 3. src 必须具有编译期静态 shape；`buffer_size = sum(src.shape)`，`aligned_count = ((buffer_size + 31) // 32) * 32`
 4. src 的 buffer 大小应为 32 的倍数（使 `aligned_count == buffer_size`）
-5. actual_num 必须满足 `1 <= actual_num <= src buffer 大小`
+5. actual_num 必须满足 `1 <= actual_num <= src buffer 大小`。当 actual_num 为编译期常量且小于 1 时，前端抛出 `ValueError`；当 K 为编译期常量且小于 1 或大于 actual_num 时，前端同样抛出 `ValueError`。动态（非编译期常量）的非法参数无前端校验，可能触发 aicore 异常
 6. K 必须满足 `1 <= K <= actual_num`
 7. `repeatTimes = (buffer_size + 31) // 32`，repeatTimes ∈ [1, 255]，即 src buffer 大小不超过 255 × 32 = 8160（硬件约束）
 8. 大 buffer 受 UB 容量限制：dst 需要 `aligned_topk` 个元素，src 需要 `aligned_count` 个元素，内部临时 buffer 量级相当，三者之和不能超过 UB 容量
