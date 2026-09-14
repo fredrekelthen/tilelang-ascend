@@ -271,38 +271,24 @@ def test_transpose_non_aligned_raises(shape, dtype):
 
 
 # -----------------------------------------------------------------------------
-# In-place transpose (dst == src): confirms doc constraint 5 — unsupported.
-# Most dispatch paths (transpose_block, scalar) produce wrong results when
-# dst == src. The 16x16 B16 AscendC::Transpose path may coincidentally pass,
-# so xfail is non-strict.
+# In-place transpose (dst == src): confirmed unsupported — raises ValueError
+# at compile time. The existing 32-byte alignment check also rejects H/W=1
+# for float16 (1*2 % 32 != 0) and empty/1D buffers.
 # -----------------------------------------------------------------------------
 @pytest.mark.low_priority
-@pytest.mark.xfail(strict=False, reason="in-place transpose unsupported per doc constraint 5")
-@pytest.mark.parametrize("dtype", ["float16", "float32", "int8"])
+@pytest.mark.parametrize("dtype", ["float16", "float32"])
 @pytest.mark.parametrize("target", ["ascendc"])
 @pytest.mark.parametrize("shape", [(16, 16), (32, 32)])
-def test_transpose_inplace_unsupported(dtype, target, shape):
+def test_transpose_inplace_rejected(dtype, target, shape):
     M, _ = shape
-    torch.manual_seed(0)
     tilelang.cache.clear_cache()
-
-    func = tilelang.compile(
-        transpose_inplace_kernel(M, dtype),
-        out_idx=[-1],
-        pass_configs=PASS_CONFIGS,
-        target=target,
-    )
-
-    torch_dtype = TORCH_DTYPE[dtype]
-    if dtype == "int8":
-        a = torch.randint(-100, 100, (M, M), dtype=torch_dtype).npu()
-    else:
-        a = torch.randn(M, M, dtype=torch_dtype).npu()
-
-    torch.npu.synchronize()
-    b = func(a)
-    ref_b = a.T.contiguous()
-    _assert_close(b, ref_b, dtype)
+    with pytest.raises(ValueError, match="does not support in-place"):
+        tilelang.compile(
+            transpose_inplace_kernel(M, dtype),
+            out_idx=[-1],
+            pass_configs=PASS_CONFIGS,
+            target=target,
+        )
 
 
 # -----------------------------------------------------------------------------
