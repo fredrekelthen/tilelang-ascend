@@ -108,3 +108,16 @@ dst = T.alloc_ub((256,), "float16")
 T.tile.compare(cmp_mask, src0, src1, "GT")                       # bit=1 表示 src0 > src1
 T.tile.select(dst, cmp_mask, src0, src1, "VSEL_CMPMASK_SPR")     # 选择较大值 = max(src0, src1)
 ```
+
+**示例 4：显式指定 tmp 临时空间**
+
+```python
+src0 = T.alloc_ub((256,), "float16")
+src1 = T.alloc_ub((256,), "float16")
+mask = T.alloc_ub((32,),  "uint8")
+dst  = T.alloc_ub((256,), "float16")
+tmp  = T.alloc_ub((512,), "uint8")  # UB 临时空间，dtype 由 lowering 重解释
+T.tile.select(dst, mask, src0, src1, "VSEL_TENSOR_TENSOR_MODE", tmp=tmp)
+```
+
+> `tmp` 省略时框架自动申请所需空间；显式传入时需提供足够的 UB 容量，dtype 无语义含义（lowering 按 `src0.dtype` 重解释）
