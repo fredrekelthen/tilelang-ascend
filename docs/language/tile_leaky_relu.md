@@ -36,7 +36,7 @@ def leaky_relu(
 |------|:---:|:----:|:---:|
 | Ascend A2 / A3 | float16, float32 | float16, float32 | float16, float32 |
 
-- 整数 dtype（int16/int32 等）会在编译期报错，不支持
+- 不支持整数 dtype（int16/int32 等）
 
 > **注意**：scalar_value 会自动按 dst 的 dtype 进行转换。
 
@@ -44,16 +44,15 @@ def leaky_relu(
 
 - 支持 1D 和 2D
 - 支持整行切片（如 `buf[0:32, :]`）；仅计算切片区域内元素，区域外内容未定义
-- 不支持 2D 列偏移切片（如 `buf[:, 8:40]`）：真机实测两端均触发 aicore 异常（507015）
+- 不支持 2D 列偏移切片（如 `buf[:, 8:40]`）
 
 ### 2.4 约束条件
 
 1. dst 与 src0 的元素总数必须相同
 2. dst 与 src0 的 dtype 必须一致（Ascend C 约束）
-3. dst 可与 src0 为同一 buffer（原地运算，如 `T.tile.leaky_relu(a_ub, a_ub, 0.01)`）
+3. dst 可与 src0 为同一 buffer（如 `T.tile.leaky_relu(a_ub, a_ub, 0.01)`）
 4. 操作数地址需 32 字节对齐（硬件约束）
-5. 不支持 BF16 数据类型（编译期报错）
-6. 特殊值遵循 IEEE 语义：`leaky_relu(0)=0`、`leaky_relu(-inf)=-inf × alpha`、`leaky_relu(nan)=nan`
+5. 不支持 BF16 数据类型
 
 ## 3. 示例代码
 

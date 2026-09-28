@@ -35,20 +35,20 @@ def silu(
 |------|:---:|:---:|
 | Ascend A2 / A3 | float16, float32 | float16, float32 |
 
-- 整数 dtype（int16/int32 等）会在编译期报错，不支持
+- 不支持整数 dtype（int16/int32 等）
 
 #### 2.3.2 Shape 支持
 
 - 支持 1D 和 2D
 - 支持整行切片（如 `buf[0:32, :]`）；仅计算切片区域内元素，区域外内容未定义
-- 不支持 2D 列偏移切片（如 `buf[:, 8:40]`）：真机实测两端均触发 aicore 异常（507015）
+- 不支持 2D 列偏移切片（如 `buf[:, 8:40]`）
 
 ### 2.4 约束条件
 
-1. dst 与 src 的元素总数应相同（无运行时校验，不匹配时产生未定义结果）
+1. dst 与 src 的元素总数应相同
 2. dst 与 src 的 dtype 必须一致（Ascend C 约束）
 3. 操作数地址需 32 字节对齐（硬件约束）
-4. **不支持原地运算**（dst 与 src 为同一 buffer）：真机实测 ascendc/pto 结果均错误，须使用独立缓冲区
+4. 不支持原地运算（dst 与 src 为同一 buffer）
 5. 特殊值遵循 IEEE 语义：`silu(0)=0`、`silu(-inf)=nan`（-inf × 0 未定义）、`silu(inf)=inf`、`silu(nan)=nan`
 
 ## 3. 示例代码

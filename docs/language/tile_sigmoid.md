@@ -39,21 +39,21 @@ def sigmoid(
 |------|:---:|:---:|
 | Ascend A2 / A3 | float16, float32 | float16, float32 |
 
-- 整数 dtype（int16/int32 等）会在编译期报错，不支持
+- 不支持整数 dtype（int16/int32 等）
 
 #### 2.3.2 Shape 支持
 
 - 支持 1D 和 2D
 - 支持整行切片（如 `buf[0:32, :]`）；仅计算切片区域内元素，区域外内容未定义
-- 不支持 2D 列偏移切片（如 `buf[:, 8:40]`）：真机实测两端均触发 aicore 异常（507015）
+- 不支持 2D 列偏移切片（如 `buf[:, 8:40]`）
 
 ### 2.4 约束条件
 
-1. dst 与 src 的元素总数应相同（无运行时校验，不匹配时产生未定义结果）
+1. dst 与 src 的元素总数应相同
 2. dst 与 src 的 dtype 必须一致（Ascend C 约束）
 3. 操作数地址需 32 字节对齐（硬件约束）
 4. 未提供 `tmp` 时，接口内部使用框架自动申请的临时缓冲区（大小为 `N × sizeof(dtype)` 字节，N 为元素个数），无需用户手动分配
-5. 原地运算（dst 与 src 为同一 buffer）仅 ascendc 支持；pto 结果错误（实测最大误差 ≈0.98）
+5. 原地运算（dst 与 src 为同一 buffer）仅 ascendc 支持
 6. 特殊值遵循 IEEE 语义：`sigmoid(0)=0.5`、`sigmoid(-inf)=0`、`sigmoid(inf)=1`、`sigmoid(nan)=nan`
 
 ## 3. 示例代码
