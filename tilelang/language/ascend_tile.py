@@ -1272,7 +1272,7 @@ def sigmoid(
 
     Args:
         dst: The destination buffer; it may alias src on ascendc (in-place),
-            but NOT on pto (results are wrong).
+            but not on pto.
         src: The source, a buffer or a contiguous region of it.
         tmp: Optional explicit UB scratch storage; allocated automatically when
             omitted. It may use any fixed-width scalar dtype; lowering
