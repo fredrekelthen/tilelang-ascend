@@ -1281,7 +1281,7 @@ def sigmoid(
     Notes:
         - dst and src should have equal element counts (no runtime check;
           mismatched sizes produce undefined results).
-        - Supported dtypes: float16, float32 (Atlas A2/A3).
+        - Supported dtypes: float16, float32 (Ascend A2 / A3).
         - Operand addresses must be 32-byte aligned (hardware constraint).
         - ``tmp`` is optional; a temporary buffer of ``N x sizeof(dtype)``
           bytes (N = element count) is auto-allocated when not provided.
@@ -1315,7 +1315,7 @@ def silu(dst: Buffer | BufferRegion, src: Buffer | BufferRegion):
     Notes:
         - dst and src should have equal element counts (no runtime check;
           mismatched sizes produce undefined results).
-        - Supported dtypes: float16, float32 (Atlas A2/A3).
+        - Supported dtypes: float16, float32 (Ascend A2 / A3).
         - Operand addresses must be 32-byte aligned (hardware constraint).
         - Special values follow IEEE semantics: silu(-inf)=nan, silu(inf)=inf,
           silu(nan)=nan.

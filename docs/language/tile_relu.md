@@ -43,7 +43,7 @@ def relu(
 
 ### 2.4 约束条件
 
-1. dst 与 src0 的元素总数必须相同（Python 断言，报错信息 "size must be same"）
+1. dst 与 src0 的元素总数必须相同
 2. dst 可与 src0 为同一 buffer（原地运算，如 `T.tile.relu(a_ub, a_ub)`）
 3. 操作数地址需 32 字节对齐（硬件约束）
 4. 特殊值遵循 IEEE 语义：`relu(-inf)=0`、`relu(nan)=nan`、`relu(0)=0`

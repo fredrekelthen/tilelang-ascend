@@ -38,7 +38,7 @@ def leaky_relu(
 
 - 整数 dtype（int16/int32 等）会在编译期报错，不支持
 
-> **注意**：scalar_value 的 dtype 若与 dst 不同，codegen 会自动插入类型转换（如 `half(0.01)`）。
+> **注意**：scalar_value 会自动按 dst 的 dtype 进行转换。
 
 #### 2.3.2 Shape 支持
 
@@ -48,11 +48,12 @@ def leaky_relu(
 
 ### 2.4 约束条件
 
-1. dst 与 src0 的元素总数必须相同（Python 断言，报错信息 "size must be same"）
+1. dst 与 src0 的元素总数必须相同
 2. dst 与 src0 的 dtype 必须一致（Ascend C 约束）
-3. 操作数地址需 32 字节对齐（硬件约束）
-4. 不支持 BF16 数据类型（编译期报错）
-5. 特殊值遵循 IEEE 语义：`leaky_relu(0)=0`、`leaky_relu(-inf)=-inf × alpha`、`leaky_relu(nan)=nan`
+3. dst 可与 src0 为同一 buffer（原地运算，如 `T.tile.leaky_relu(a_ub, a_ub, 0.01)`）
+4. 操作数地址需 32 字节对齐（硬件约束）
+5. 不支持 BF16 数据类型（编译期报错）
+6. 特殊值遵循 IEEE 语义：`leaky_relu(0)=0`、`leaky_relu(-inf)=-inf × alpha`、`leaky_relu(nan)=nan`
 
 ## 3. 示例代码
 
