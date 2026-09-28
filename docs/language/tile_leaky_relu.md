@@ -36,8 +36,6 @@ def leaky_relu(
 |------|:---:|:----:|:---:|
 | Ascend A2 / A3 | float16, float32 | float16, float32 | float16, float32 |
 
-- 不支持整数 dtype（int16/int32 等）
-
 > **注意**：scalar_value 会自动按 dst 的 dtype 进行转换。
 
 #### 2.3.2 Shape 支持
@@ -52,7 +50,6 @@ def leaky_relu(
 2. dst 与 src0 的 dtype 必须一致（Ascend C 约束）
 3. dst 可与 src0 为同一 buffer（如 `T.tile.leaky_relu(a_ub, a_ub, 0.01)`）
 4. 操作数地址需 32 字节对齐（硬件约束）
-5. 不支持 BF16 数据类型
 
 ## 3. 示例代码
 

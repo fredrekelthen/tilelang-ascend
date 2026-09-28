@@ -33,8 +33,6 @@ def relu(
 |------|:---:|:----:|
 | Ascend A2 / A3 | float16, float32 | float16, float32 |
 
-- 不支持整数 dtype（int16/int32 等）
-
 #### 2.3.2 Shape 支持
 
 - 支持 1D 和 2D
